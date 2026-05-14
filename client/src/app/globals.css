@@ -1,0 +1,33 @@
+.swiper-wrapper {
+  display: flex !important;
+  flex-direction: row !important;
+}
+.swiper-slide {
+  height: auto !important;
+}
+
+.carouselTicker__list {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: max-content;
+  animation: ticker 20s linear infinite;
+}
+
+@keyframes ticker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.carouselTicker {
+  overflow: hidden;
+  width: 100%;
+  margin-top: 30px;
+}
