@@ -1,0 +1,73 @@
+{
+  "expo": {
+    "name": "bharat-scrap-facilities",
+    "slug": "bharat-scrap-facilities",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app requires access to your location while you are using the app.",
+        "NSLocationAlwaysUsageDescription": "This app requires access to your location even when running in the background.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app requires access to your location both while using the app and in the background."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyD022IF_7EVi9DEqKBizpz6vXM_nuFeE1g"
+        }
+      },
+      "package": "com.hbsdevelopersteam.bharatscrapfacilities",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#ffffff",
+          "sounds": []
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow this app to access your location even when running in the background.",
+          "locationAlwaysPermission": "Allow this app to access your location in the background.",
+          "locationWhenInUsePermission": "Allow this app to access your location while you are using the app.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "326ead19-ff33-4e61-bbc2-a0034073780f"
+      }
+    },
+    "owner": "hbsdevelopersteam"
+  }
+}
