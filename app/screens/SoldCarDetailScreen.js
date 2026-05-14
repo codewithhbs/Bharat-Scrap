@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
     View,
     Text,
+    ScrollView,
     TouchableOpacity,
     StyleSheet,
     Animated,
@@ -9,14 +10,19 @@ import {
     FlatList,
     Dimensions,
     ActivityIndicator,
+    PanResponder,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Svg, Path, Circle } from 'react-native-svg';
+// ✅ react-native-maps ki jagah expo-maps use kar rahe hain
+import { AppleMaps, GoogleMaps } from 'expo-maps';
+import { Platform } from 'react-native';
 import { Colors } from '../constants/colors';
 import api from '../lib/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const POLL_INTERVAL = 10000; // 10 sec pe UI update, backend 1-2 min me update karta hai
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 
@@ -94,6 +100,26 @@ const STATUS_CONFIG = {
     completed:            { label: 'Completed',            bg: '#D1FAE5', text: '#065F46' },
     sold:                 { label: 'Sold',                 bg: '#FEE2E2', text: '#991B1B' },
 };
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+// Haversine formula — do coordinates ke beech ki km distance
+function getDistanceKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatDistance(km) {
+    if (km < 1) return `${Math.round(km * 1000)} m`;
+    return `${km.toFixed(1)} km`;
+}
 
 // ─── Reusable Components ──────────────────────────────────────────────────────
 
@@ -180,6 +206,236 @@ function PageHeader({ title, onBack }) {
     );
 }
 
+// ─── Live Tracking Map Component (expo-maps) ──────────────────────────────────
+
+// ✅ ScrollView scroll band karne ke liye parent se ref pass hoga
+function LiveTrackingMap({ carId, craneManLocation, pickupLocation, onMapTouchStart, onMapTouchEnd }) {
+    const [craneLocation, setCraneLocation] = useState(craneManLocation);
+    const [lastUpdated, setLastUpdated] = useState(null);
+    const [distance, setDistance] = useState(null);
+    const pulseAnim = useRef(new Animated.Value(1)).current;
+
+    // Pulse animation for live dot
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseAnim, { toValue: 1.4, duration: 800, useNativeDriver: true }),
+                Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+            ])
+        ).start();
+    }, []);
+
+    // ✅ Har 10 second mein backend se fresh craneMan location fetch karo
+    useEffect(() => {
+        const fetchCraneLocation = async () => {
+            try {
+                const res = await api.get(`/api/car/get-car-detail-by-id/${carId}`);
+                if (res.data?.success) {
+                    const loc = res.data.data?.craneMan?.location;
+                    if (loc?.latitude && loc?.longitude) {
+                        const newLoc = {
+                            latitude: loc.latitude,
+                            longitude: loc.longitude,
+                        };
+                        setCraneLocation(newLoc);
+                        setLastUpdated(new Date(loc.timestamp || Date.now()));
+
+                        // Distance calculate karo pickup location se
+                        if (pickupLocation?.latitude && pickupLocation?.longitude) {
+                            const dist = getDistanceKm(
+                                newLoc.latitude, newLoc.longitude,
+                                pickupLocation.latitude, pickupLocation.longitude
+                            );
+                            setDistance(dist);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.log('Location fetch error:', err.message);
+            }
+        };
+
+        // Pehla fetch turant
+        fetchCraneLocation();
+
+        // Phir har 10 sec mein
+        const interval = setInterval(fetchCraneLocation, POLL_INTERVAL);
+        return () => clearInterval(interval);
+    }, [carId]);
+
+    if (!craneLocation?.latitude) {
+        return (
+            <View style={styles.mapPlaceholder}>
+                <ActivityIndicator color="#2563EB" />
+                <Text style={styles.mapPlaceholderText}>Loading crane location…</Text>
+            </View>
+        );
+    }
+
+    // ✅ Camera position — craneLocation pe centered
+    const cameraPosition = {
+        coordinates: {
+            latitude: craneLocation.latitude,
+            longitude: craneLocation.longitude,
+        },
+        zoom: 14,
+    };
+
+    // ✅ GoogleMaps markers — id field REQUIRED hai
+    const markers = [
+        {
+            id: 'crane-man',                          // ← required
+            coordinates: {
+                latitude: craneLocation.latitude,
+                longitude: craneLocation.longitude,
+            },
+            title: 'Crane Man',
+            snippet: 'Current location',
+        },
+        ...(pickupLocation?.latitude ? [{
+            id: 'pickup-loc',                         // ← required
+            coordinates: {
+                latitude: pickupLocation.latitude,
+                longitude: pickupLocation.longitude,
+            },
+            title: 'Pickup Location',
+            snippet: 'Your location',
+        }] : []),
+    ];
+
+    // ✅ Polylines array
+    const polylines = pickupLocation?.latitude ? [{
+        id: 'route-line',                             // ← id dena better hai
+        coordinates: [
+            { latitude: craneLocation.latitude, longitude: craneLocation.longitude },
+            { latitude: pickupLocation.latitude, longitude: pickupLocation.longitude },
+        ],
+        color: '#2563EB',
+        width: 3,
+    }] : [];
+
+    // ✅ AppleMaps annotations (iOS ke liye)
+    const annotations = [
+        {
+            id: 'crane-man',
+            coordinates: {
+                latitude: craneLocation.latitude,
+                longitude: craneLocation.longitude,
+            },
+            title: 'Crane Man',
+            text: 'Current location',
+        },
+        ...(pickupLocation?.latitude ? [{
+            id: 'pickup-loc',
+            coordinates: {
+                latitude: pickupLocation.latitude,
+                longitude: pickupLocation.longitude,
+            },
+            title: 'Pickup Location',
+            text: 'Your location',
+        }] : []),
+    ];
+
+    // ✅ key prop se map re-render hoga jab location change ho
+    const mapKey = `${craneLocation.latitude}-${craneLocation.longitude}`;
+
+    const renderMap = () => {
+        if (Platform.OS === 'ios') {
+            return (
+                <AppleMaps.View
+                    key={mapKey}
+                    style={styles.map}
+                    cameraPosition={cameraPosition}
+                    annotations={annotations}
+                    polylines={polylines}
+                    uiSettings={{
+                        myLocationButtonEnabled: false,
+                        compassEnabled: false,
+                    }}
+                />
+            );
+        }
+
+        console.log("markers",markers)
+
+        // Android — GoogleMaps
+        return (
+            <GoogleMaps.View
+                key={mapKey}
+                style={styles.map}
+                cameraPosition={cameraPosition}
+                markers={markers}
+                polylines={polylines}
+                uiSettings={{
+                    myLocationButtonEnabled: false,
+                    zoomControlsEnabled: false,
+                    compassEnabled: false,
+                }}
+                properties={{
+                    isTrafficEnabled: false,
+                }}
+            />
+        );
+    };
+
+    return (
+        <View style={styles.mapWrapper}>
+            {/* ── Distance + Last Updated Bar ── */}
+            <View style={styles.mapInfoBar}>
+                <View style={styles.mapInfoItem}>
+                    <Animated.View style={[styles.liveDot, { transform: [{ scale: pulseAnim }] }]} />
+                    <Text style={styles.mapInfoLabel}>Live Tracking</Text>
+                </View>
+                {distance !== null && (
+                    <View style={styles.mapInfoItem}>
+                        <LocationIcon color="#2563EB" />
+                        <Text style={styles.mapDistanceText}>
+                            {formatDistance(distance)} away
+                        </Text>
+                    </View>
+                )}
+                {lastUpdated && (
+                    <Text style={styles.mapUpdatedText}>
+                        {lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                )}
+            </View>
+
+            {/* ── DEBUG — confirm ho raha hai ki location sahi aa rahi hai ── */}
+            {__DEV__ && (
+                <View style={{ backgroundColor: '#FEF9C3', paddingHorizontal: 12, paddingVertical: 4 }}>
+                    <Text style={{ fontSize: 10, color: '#713F12' }}>
+                        🐛 Crane: {craneLocation?.latitude?.toFixed(5)}, {craneLocation?.longitude?.toFixed(5)}
+                    </Text>
+                </View>
+            )}
+
+            {/* ✅ Map ko touch karne pe ScrollView scroll band ho jaye */}
+            <View
+                onTouchStart={onMapTouchStart}
+                onTouchEnd={onMapTouchEnd}
+                onTouchCancel={onMapTouchEnd}
+                style={{ height: 260 }}
+            >
+                {renderMap()}
+            </View>
+
+            {/* ── Legend ── */}
+            <View style={styles.mapLegend}>
+                <View style={styles.legendItem}>
+                    <Text style={styles.legendEmoji}>🚛</Text>
+                    <Text style={styles.legendText}>Crane Man</Text>
+                </View>
+                <View style={styles.legendDivider} />
+                <View style={styles.legendItem}>
+                    <Text style={styles.legendEmoji}>📍</Text>
+                    <Text style={styles.legendText}>Your Location</Text>
+                </View>
+            </View>
+        </View>
+    );
+}
+
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
 export default function SoldCarDetailScreen({ route, navigation }) {
@@ -189,6 +445,7 @@ export default function SoldCarDetailScreen({ route, navigation }) {
     const [isUser, setIsUser] = useState(false);
 
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    const [scrollEnabled, setScrollEnabled] = useState(true);
 
     const fetchCarDetail = async () => {
         try {
@@ -236,6 +493,18 @@ export default function SoldCarDetailScreen({ route, navigation }) {
         price, createdAt, updatedAt,
     } = carDetail;
 
+    // ✅ Map ke liye craneMan ki current location
+    const craneManCoords = craneMan?.location?.latitude ? {
+        latitude: craneMan.location.latitude,
+        longitude: craneMan.location.longitude,
+    } : null;
+
+    // TODO: agar backend se lat/lng mile toh yahan set karo
+    const pickupCoords = null;
+
+    // ✅ Sirf user ko dikhao, sirf en_route status pe
+    const showMap = isUser && (status === 'en_route' || status === 'en_route_to_garage') && craneManCoords;
+
     return (
         <SafeAreaView style={styles.safeArea} edges={['top']}>
             <PageHeader title="Car Details" onBack={() => navigation.goBack()} />
@@ -244,6 +513,7 @@ export default function SoldCarDetailScreen({ route, navigation }) {
                 style={{ opacity: fadeAnim }}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
+                scrollEnabled={scrollEnabled}
             >
                 {/* ── Hero Card ── */}
                 <LinearGradient colors={['#1E3A8A', '#2563EB']} style={styles.heroCard}>
@@ -273,6 +543,23 @@ export default function SoldCarDetailScreen({ route, navigation }) {
                         )}
                     </View>
                 </LinearGradient>
+
+                {/* ✅ LIVE TRACKING MAP — sirf user ko, sirf en_route pe */}
+                {showMap && (
+                    <View style={styles.section}>
+                        <View style={styles.sectionHeader}>
+                            <LocationIcon color="#2563EB" />
+                            <Text style={styles.sectionTitle}>Live Crane Tracking</Text>
+                        </View>
+                        <LiveTrackingMap
+                            carId={carId}
+                            craneManLocation={craneManCoords}
+                            pickupLocation={pickupCoords}
+                            onMapTouchStart={() => setScrollEnabled(false)}
+                            onMapTouchEnd={() => setScrollEnabled(true)}
+                        />
+                    </View>
+                )}
 
                 {/* ── Car Gallery ── */}
                 {images && images.length > 0 && (
@@ -448,4 +735,74 @@ const styles = StyleSheet.create({
     thumbContainer: { width: (SCREEN_WIDTH - 32 - 16 * 2 - 10 * 2) / 3, alignItems: 'center', gap: 5 },
     thumbImage: { width: '100%', aspectRatio: 1, borderRadius: 10, backgroundColor: '#E5E7EB' },
     thumbLabel: { fontSize: 11, color: '#6B7280', fontWeight: '500', textAlign: 'center' },
+
+    // ── Map Styles ──
+    mapWrapper: {
+        borderRadius: 12,
+        overflow: 'hidden',
+        backgroundColor: '#F3F4F6',
+    },
+    mapInfoBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        backgroundColor: '#EFF6FF',
+        borderBottomWidth: 1,
+        borderBottomColor: '#DBEAFE',
+    },
+    mapInfoItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+    },
+    liveDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#22c55e',
+    },
+    mapInfoLabel: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#1E40AF',
+    },
+    mapDistanceText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#2563EB',
+    },
+    mapUpdatedText: {
+        fontSize: 11,
+        color: '#6B7280',
+    },
+    map: {
+        width: '100%',
+        height: 260,
+    },
+    mapPlaceholder: {
+        height: 200,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 12,
+    },
+    mapPlaceholderText: {
+        fontSize: 13,
+        color: '#6B7280',
+    },
+    mapLegend: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 8,
+        backgroundColor: '#fff',
+        gap: 12,
+    },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    legendEmoji: { fontSize: 14 },
+    legendText: { fontSize: 12, color: '#374151', fontWeight: '500' },
+    legendDivider: { width: 1, height: 14, backgroundColor: '#E5E7EB' },
 });
