@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import useAuthStore from "../store/useAuthStore";
 import { Eye, EyeClosed, Recycle } from "lucide-react";
 import api from "../utils/api";
+import axios from 'axios'
 
 const Login = () => {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const res = await api.post("/admin/admin-login", {
+      const res = await axios.post("http://192.168.1.13:4023/api/admin/admin-login", {
         email: form.email,
         password: form.password,
       });

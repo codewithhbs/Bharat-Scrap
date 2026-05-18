@@ -10,7 +10,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '../constants/colors';
 import Toast from '../components/Toast';
 import api from '../lib/api';
-
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAP_API;
 function PageHeader({ title, onBack }) {
   return (
     <View style={styles.header}>
@@ -71,7 +72,9 @@ export default function ConditionFormScreen({ route, navigation }) {
   const [anyMissingPart, setMissingPart] = useState(false);  // ← New
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
-  const [pickupLocation, setPickupLocation] = useState('');
+  const [pickupAddress, setPickupAddress] = useState('');
+  const [pickupLatLng, setPickupLatLng] = useState({ latitude: null, longitude: null, placeId: null });
+  const [streetAndHouse, setStreetAndHouse] = useState('');
 
   // 6 separate image states
   const [images, setImages] = useState({
@@ -124,6 +127,16 @@ export default function ConditionFormScreen({ route, navigation }) {
       return;
     }
 
+    if (!pickupAddress || !pickupLatLng.latitude) {
+      Alert.alert('Location Required', 'Please search and select your pickup location.');
+      return;
+    }
+
+    if (!streetAndHouse.trim()) {
+      Alert.alert('Address Required', 'Please enter your house number and street.');
+      return;
+    }
+
     setLoading(true);
     try {
       const formData = new FormData();
@@ -146,7 +159,23 @@ export default function ConditionFormScreen({ route, navigation }) {
       formData.append('isAccident', accidents.toString());
       formData.append('isRunningCondition', isRunningCondition.toString());
       formData.append('anyMissingPart', anyMissingPart.toString());
-      formData.append('pickupLocation', pickupLocation);
+      // Validation - location zaroori hai
+      if (!pickupAddress || !pickupLatLng.latitude) {
+        Alert.alert('Location Required', 'Please search and select your pickup location.');
+        setLoading(false);
+        return;
+      }
+      if (!streetAndHouse.trim()) {
+        Alert.alert('Address Required', 'Please enter your house number and street.');
+        setLoading(false);
+        return;
+      }
+
+      formData.append('pickupAddress', pickupAddress);
+      formData.append('pickupStreetAndHouse', streetAndHouse);
+      formData.append('pickupLatitude', pickupLatLng.latitude.toString());
+      formData.append('pickupLongitude', pickupLatLng.longitude.toString());
+      if (pickupLatLng.placeId) formData.append('pickupPlaceId', pickupLatLng.placeId);
 
       const res = await api.put(`/api/car/car-detail-update/${rcNumber}`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -181,7 +210,12 @@ export default function ConditionFormScreen({ route, navigation }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <PageHeader title="Car Condition" onBack={() => navigation.goBack()} />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"   // ← ye add karo
+        nestedScrollEnabled={true}
+      >
 
         {/* ── KM Driven ── */}
         <View style={styles.section}>
@@ -202,14 +236,75 @@ export default function ConditionFormScreen({ route, navigation }) {
         </View>
 
         {/* ── Pickup Location ── */}
-        <View style={styles.section}>
+        <View style={[styles.section, { zIndex: 10 }]}>
           <Text style={styles.sectionTitle}>Pickup Location</Text>
+          <Text style={styles.photoHint}>Search and select your area / locality</Text>
+
+          <GooglePlacesAutocomplete
+            placeholder="Search location..."
+            minLength={2}
+            fetchDetails={true}
+            onPress={(data, details = null) => {
+              // data.description = full address
+              // details.geometry.location = { lat, lng }
+              setPickupAddress(data.description);
+              if (details?.geometry?.location) {
+                setPickupLatLng({
+                  latitude: details.geometry.location.lat,
+                  longitude: details.geometry.location.lng,
+                  placeId: data.place_id,
+                });
+              }
+            }}
+            query={{
+              key: GOOGLE_PLACES_API_KEY,
+              language: 'en',
+              components: 'country:in',   // sirf India ke results
+            }}
+            enablePoweredByContainer={false}
+            debounce={300}
+            styles={{
+              container: { flex: 0 },
+              textInput: styles.textInput,
+              listView: {
+                borderWidth: 1,
+                borderColor: Colors.neutral200,
+                borderRadius: 8,
+                marginTop: 4,
+                backgroundColor: Colors.white,
+              },
+              row: { padding: 12, backgroundColor: Colors.white },
+              description: { fontSize: 13, color: Colors.neutral900 },
+              separator: { height: 1, backgroundColor: Colors.neutral100 },
+            }}
+            textInputProps={{
+              placeholderTextColor: Colors.neutral400,
+            }}
+          />
+
+          {/* Selected location confirm dikhao */}
+          {pickupAddress ? (
+            <View style={styles.selectedLocBox}>
+              <Text style={styles.selectedLocLabel}>✓ Selected Location</Text>
+              <Text style={styles.selectedLocText} numberOfLines={2}>{pickupAddress}</Text>
+              {pickupLatLng.latitude && (
+                <Text style={styles.selectedLocCoords}>
+                  {pickupLatLng.latitude.toFixed(5)}, {pickupLatLng.longitude.toFixed(5)}
+                </Text>
+              )}
+            </View>
+          ) : null}
+
+          {/* House number + street field */}
+          <Text style={[styles.sectionTitle, { marginTop: 8 }]}>House No. & Street</Text>
+          <Text style={styles.photoHint}>Exact landmark for crane to reach you</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="e.g. Rohini West, New Delhi"
+            placeholder="e.g. H-42, Gali No. 3, Near Apollo Hospital"
             placeholderTextColor={Colors.neutral400}
-            value={pickupLocation}
-            onChangeText={setPickupLocation}
+            value={streetAndHouse}
+            onChangeText={setStreetAndHouse}
+            multiline
           />
         </View>
 
@@ -364,5 +459,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.neutral900,
     backgroundColor: Colors.neutral50,
+  },
+  selectedLocBox: {
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 8,
+    gap: 4,
+  },
+  selectedLocLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0369A1',
+    letterSpacing: 0.5,
+  },
+  selectedLocText: {
+    fontSize: 13,
+    color: Colors.neutral900,
+    fontWeight: '500',
+  },
+  selectedLocCoords: {
+    fontSize: 11,
+    color: Colors.neutral500,
+    fontFamily: 'monospace',
   },
 });

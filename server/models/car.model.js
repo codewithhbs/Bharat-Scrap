@@ -35,8 +35,13 @@ const carSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Car schema me
     pickupLocation: {
-      type: String,
+      address: { type: String },      // Full formatted address from Google
+      streetAndHouse: { type: String },    // User-entered house no + street
+      latitude: { type: Number },
+      longitude: { type: Number },
+      placeId: { type: String },      // Optional - Google place ID
     },
 
     frontImage: {

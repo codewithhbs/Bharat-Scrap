@@ -51,6 +51,7 @@ async function adminLogin(req, res) {
 
         const accessToken = signAccessToken(safeUser);
         const { token: refreshToken, jti } = await signRefreshToken(user._id);
+        console.log("i am login")
 
         res.status(201).json({
             success: true,

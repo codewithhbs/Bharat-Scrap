@@ -127,37 +127,35 @@ async function carDetailUpdate(req, res) {
     try {
         const userId = req.user?.sub;
         const { rcNumber } = req.params;
-        const { kmDriven, isScrateched, isAccident, isRunningCondition, anyMissingPart, pickupLocation } = req.body;
+        const {
+            kmDriven, isScrateched, isAccident,
+            isRunningCondition, anyMissingPart,
+            // ── NEW: pickup location fields ──
+            pickupAddress,
+            pickupStreetAndHouse,
+            pickupLatitude,
+            pickupLongitude,
+            pickupPlaceId,
+        } = req.body;
 
         if (!userId) {
-            return res.status(401).json({
-                success: false,
-                message: "Unauthorized",
-            });
+            return res.status(401).json({ success: false, message: "Unauthorized" });
         }
 
         const carDetail = await Car.findOne({ rcNumber });
         if (!carDetail) {
-            return res.status(404).json({
-                success: false,
-                message: "Car not found",
-            });
+            return res.status(404).json({ success: false, message: "Car not found" });
         }
 
         const fileFields = [
-            "frontImage",
-            "backImage",
-            "chassisImage",
-            "engineImage",
-            "tyreImage",
-            "odometerImage",
+            "frontImage", "backImage", "chassisImage",
+            "engineImage", "tyreImage", "odometerImage",
         ];
 
         await Promise.all(
             fileFields.map(async (field) => {
                 if (req.files?.[field]) {
                     const uploaded = await uploadImage(req.files[field][0].buffer);
-
                     carDetail[field] = {
                         image: uploaded.image,
                         public_id: uploaded.public_id,
@@ -166,14 +164,22 @@ async function carDetailUpdate(req, res) {
             })
         );
 
-        // 🔥 Other fields
+        // Existing fields
         carDetail.kmDriven = kmDriven;
         carDetail.isScrateched = isScrateched;
         carDetail.isAccident = isAccident;
         carDetail.isRunningCondition = isRunningCondition;
         carDetail.anyMissingPart = anyMissingPart;
-        carDetail.pickupLocation = pickupLocation;
-        
+
+        // ── NEW: Pickup location object ──
+        carDetail.pickupLocation = {
+            address: pickupAddress,
+            streetAndHouse: pickupStreetAndHouse,
+            latitude: pickupLatitude ? parseFloat(pickupLatitude) : undefined,
+            longitude: pickupLongitude ? parseFloat(pickupLongitude) : undefined,
+            placeId: pickupPlaceId,
+        };
+
         await carDetail.save();
 
         return res.status(200).json({
@@ -183,10 +189,7 @@ async function carDetailUpdate(req, res) {
         });
     } catch (error) {
         console.log("Internal server error", error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error",
-        });
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 }
 

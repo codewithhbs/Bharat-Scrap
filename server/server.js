@@ -23,7 +23,7 @@ app.use(
       "http://192.168.1.13:3000",
       "http://192.168.1.13:3001",
       "http://192.168.1.13:3007",
-      "http://192.168.1.13:5173",
+      "http://localhost:5173",
     ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],

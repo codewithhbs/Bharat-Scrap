@@ -3,20 +3,22 @@ import {
     View, Text, ScrollView, TouchableOpacity, StyleSheet,
     ActivityIndicator, RefreshControl, Modal, Image,
     TextInput, KeyboardAvoidingView, Platform, Linking,
-    Dimensions, Pressable,
+    Dimensions, Pressable, Animated, PermissionsAndroid
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Svg, Path, Circle, Rect } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import api from '../lib/api';
 import Toast from './Toast';
 import { useNavigation } from '@react-navigation/native';
 import { startLocationTracking, stopLocationTracking } from '../services/locationService';
-// import { startLocationService, startLocationTracking, stopLocationService, stopLocationTracking } from '../services/locationService';
-// import { startLocationTracking, stopLocationTracking } from '../services/newlocationService';
+import Geolocation from '@react-native-community/geolocation';
 
 const { width: SW } = Dimensions.get('window');
+
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAP_API;
 
 // ─── Color Palette ─────────────────────────────────────────────────────────────
 const C = {
@@ -45,12 +47,9 @@ const C = {
     textMuted: '#9CA3AF',
     white: '#FFFFFF',
     divider: '#E9ECF3',
-    overlay: 'rgba(0,0,0,0.5)',
+    overlay: 'rgba(0,0,0,0.55)',
 };
 
-// ─── Status Config ─────────────────────────────────────────────────────────────
-// Full flow:
-// processing → en_route → inspecting → picked_up → en_route_to_garage → at_garage → sold
 const STATUS = {
     processing: { color: C.orange, dim: C.orangeDim, border: C.orangeBorder, label: 'Assigned', icon: 'clock' },
     en_route: { color: C.blue, dim: C.blueDim, border: 'rgba(37,99,235,0.25)', label: 'En Route', icon: 'map' },
@@ -62,7 +61,6 @@ const STATUS = {
     cancelled: { color: C.red, dim: C.redDim, border: 'rgba(220,38,38,0.25)', label: 'Cancelled', icon: 'x' },
 };
 
-// Active job statuses (not terminal)
 const ACTIVE_STATUSES = ['processing', 'en_route', 'inspecting', 'picked_up', 'en_route_to_garage', 'at_garage'];
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
@@ -81,7 +79,6 @@ function Icon({ name, size = 18, color = C.text, strokeWidth = 1.8 }) {
         truck: <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Rect x="1" y="3" width="15" height="13" rx="1" {...s} /><Path d="M16 8h4l3 3v5h-7V8z" {...s} /><Circle cx="5.5" cy="18.5" r="2.5" {...s} /><Circle cx="18.5" cy="18.5" r="2.5" {...s} /></Svg>,
         pin: <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" {...s} /><Circle cx="12" cy="10" r="3" {...s} /></Svg>,
         user: <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" {...s} /><Circle cx="12" cy="7" r="4" {...s} /></Svg>,
-        list: <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" {...s} /></Svg>,
         camera: <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" {...s} /><Circle cx="12" cy="13" r="4" {...s} /></Svg>,
         bank: <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" {...s} /><Path d="M9 22V12h6v10" {...s} /></Svg>,
         upi: <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Rect x="2" y="5" width="20" height="14" rx="2" {...s} /><Path d="M2 10h20" {...s} /></Svg>,
@@ -91,11 +88,54 @@ function Icon({ name, size = 18, color = C.text, strokeWidth = 1.8 }) {
         lock: <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Rect x="3" y="11" width="18" height="11" rx="2" {...s} /><Path d="M7 11V7a5 5 0 0110 0v4" {...s} /></Svg>,
         garage: <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" {...s} /><Path d="M9 22V12h6v10M5 14h14" {...s} /></Svg>,
         refresh: <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="M23 4v6h-6M1 20v-6h6" {...s} /><Path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" {...s} /></Svg>,
+        close: <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="M18 6L6 18M6 6l12 12" {...s} /></Svg>,
+        expand: <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" {...s} /></Svg>,
     };
     return icons[name] || null;
 }
 
-// ─── Status Badge ─────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function getDistanceKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+function formatDist(km) {
+    if (km === null || km === undefined) return '—';
+    if (km < 1) return `${Math.round(km * 1000)} m`;
+    return `${km.toFixed(1)} km`;
+}
+function formatETA(km) {
+    if (km === null || km === undefined) return '—';
+    const mins = Math.round((km / 30) * 60);
+    if (mins < 1) return '<1 min';
+    if (mins < 60) return `${mins} min`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h}h ${m}m`;
+}
+
+function decodePolyline(encoded) {
+    let index = 0, lat = 0, lng = 0;
+    const coords = [];
+    while (index < encoded.length) {
+        let b, shift = 0, result = 0;
+        do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+        lat += result & 1 ? ~(result >> 1) : result >> 1;
+        shift = 0; result = 0;
+        do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+        lng += result & 1 ? ~(result >> 1) : result >> 1;
+        coords.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
+    }
+    return coords;
+}
+
 function Badge({ status }) {
     const cfg = STATUS[status] || STATUS.processing;
     return (
@@ -111,7 +151,6 @@ const bd = StyleSheet.create({
     text: { fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
 });
 
-// ─── Stat Tile ─────────────────────────────────────────────────────────────────
 function StatTile({ value, label }) {
     return (
         <View style={st.wrap}>
@@ -126,16 +165,504 @@ const st = StyleSheet.create({
     lbl: { fontSize: 9, color: 'rgba(255,255,255,0.65)', fontWeight: '600', marginTop: 2, letterSpacing: 0.8, textTransform: 'uppercase' },
 });
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const handleCall = (phone) => {
-    if (!phone) return;
-    Linking.canOpenURL(`tel:${phone}`).then(ok => { if (ok) Linking.openURL(`tel:${phone}`); });
+const handleCall = async (phone) => {
+  try {
+    const url = `tel:${phone}`;
+
+    await Linking.openURL(url);
+  } catch (e) {
+    console.log('Call failed:', e);
+  }
 };
-const handleNavigation = (address) => {
-    if (!address) return;
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
-    Linking.canOpenURL(url).then(ok => { if (ok) Linking.openURL(url); });
-};
+function openGoogleMaps(lat, lng) {
+    const url =
+        Platform.OS === 'ios'
+            ? `maps:0,0?q=${lat},${lng}`
+            : `geo:0,0?q=${lat},${lng}`;
+    Linking.canOpenURL(url).then((ok) => {
+        Linking.openURL(
+            ok ? url : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
+        );
+    });
+}
+
+// ─── Pulse Ring for Map Marker ────────────────────────────────────────────────
+function PulseRing({ color = C.blue }) {
+    const anim = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(anim, { toValue: 1, duration: 1400, useNativeDriver: true }),
+                Animated.timing(anim, { toValue: 0, duration: 0, useNativeDriver: true }),
+            ])
+        ).start();
+    }, []);
+    return (
+        <Animated.View style={{
+            position: 'absolute',
+            width: 48, height: 48, borderRadius: 24,
+            backgroundColor: color,
+            opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] }),
+            transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [1, 2.2] }) }],
+        }} />
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── NAVIGATION MAP MODAL ─────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+function NavigationMapModal({ visible, job, onClose }) {
+    const mapRef = useRef(null);
+    const watchId = useRef(null);
+    const hasInitialFit = useRef(false);
+    const prevCraneRef = useRef(null);
+
+    const [craneLocation, setCraneLocation] = useState(null);
+    const [distance, setDistance] = useState(null);
+    const [mapReady, setMapReady] = useState(false);
+    const [locationError, setLocationError] = useState(null);
+    const [routeCoords, setRouteCoords] = useState([]);
+
+    // Pickup coords — fixed (user ki location)
+    const pickupCoords =
+        job?.pickupLocation?.latitude && job?.pickupLocation?.longitude
+            ? {
+                latitude: parseFloat(job.pickupLocation.latitude),
+                longitude: parseFloat(job.pickupLocation.longitude),
+            }
+            : null;
+
+    const pickupLabel =
+        job?.pickupLocation?.address ||
+        job?.pickupLocation?.streetAndHouse ||
+        'Pickup Location';
+
+    // Android permission
+    const requestAndroidPermission = async () => {
+        if (Platform.OS !== 'android') return true;
+        const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+            {
+                title: 'Location Permission',
+                message: 'App needs your location to navigate to pickup.',
+                buttonPositive: 'OK',
+            }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+    };
+
+    // Start watching craneman (meri) location
+    const startWatch = async () => {
+        const hasPermission = await requestAndroidPermission();
+        if (!hasPermission) {
+            setLocationError('Location permission denied');
+            return;
+        }
+
+        // Fast one-time fix first
+        Geolocation.getCurrentPosition(
+            (pos) => {
+                const coords = {
+                    latitude: pos.coords.latitude,
+                    longitude: pos.coords.longitude,
+                };
+                setCraneLocation(coords);
+                if (pickupCoords) {
+                    setDistance(getDistanceKm(
+                        coords.latitude, coords.longitude,
+                        pickupCoords.latitude, pickupCoords.longitude
+                    ));
+                    fetchRoute(coords, pickupCoords);
+                }
+            },
+            (err) => setLocationError('Location unavailable: ' + err.message),
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+
+        // Then live watch
+        watchId.current = Geolocation.watchPosition(
+            (pos) => {
+                const updated = {
+                    latitude: pos.coords.latitude,
+                    longitude: pos.coords.longitude,
+                };
+                setCraneLocation(updated);
+                if (pickupCoords) {
+                    setDistance(getDistanceKm(
+                        updated.latitude, updated.longitude,
+                        pickupCoords.latitude, pickupCoords.longitude
+                    ));
+                    // watchPosition ke andar, setDistance ke baad:
+                    const prevCoords = prevCraneRef.current;
+                    const moved = prevCoords
+                        ? getDistanceKm(prevCoords.latitude, prevCoords.longitude, updated.latitude, updated.longitude)
+                        : 1;
+                    if (moved > 0.1) { // 100m se zyada move kiya tab hi re-fetch
+                        fetchRoute(updated, pickupCoords);
+                        prevCraneRef.current = updated;
+                    }
+                }
+            },
+            (err) => console.warn('Watch error:', err.message),
+            {
+                enableHighAccuracy: true,
+                distanceFilter: 10,
+                interval: 5000,
+                fastestInterval: 3000,
+            }
+        );
+    };
+
+    const stopWatch = () => {
+        if (watchId.current !== null) {
+            Geolocation.clearWatch(watchId.current);
+            watchId.current = null;
+        }
+    };
+
+    const fetchRoute = async (origin, destination) => {
+        try {
+            const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&mode=driving&key=${GOOGLE_MAPS_API_KEY}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data.routes?.length > 0) {
+                const points = decodePolyline(data.routes[0].overview_polyline.points);
+                setRouteCoords(points);
+            }
+        } catch (e) {
+            console.warn('Route fetch failed:', e);
+        }
+    };
+
+    useEffect(() => {
+        if (visible) {
+            hasInitialFit.current = false;
+            setLocationError(null);
+            setCraneLocation(null);
+            setDistance(null);
+            setMapReady(false);
+            startWatch();
+        } else {
+            stopWatch();
+        }
+        return () => stopWatch();
+    }, [visible]);
+
+    // Fit map — sirf ek baar jab dono coords ho
+    useEffect(() => {
+        if (!mapReady || !mapRef.current || hasInitialFit.current) return;
+
+        if (craneLocation && pickupCoords) {
+            // hasInitialFit effect mein
+            mapRef.current.fitToCoordinates(
+                routeCoords.length > 0 ? routeCoords : [craneLocation, pickupCoords],
+                { edgePadding: { top: 120, right: 60, bottom: 300, left: 60 }, animated: true }
+            );
+            hasInitialFit.current = true;
+        } else if (pickupCoords) {
+            mapRef.current.animateToRegion({
+                latitude: pickupCoords.latitude,
+                longitude: pickupCoords.longitude,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+            }, 600);
+        }
+    }, [mapReady, !!craneLocation]);
+
+    if (!visible) return null;
+
+    return (
+        <Modal
+            visible={visible}
+            animationType="slide"
+            transparent={false}
+            onRequestClose={onClose}
+        >
+            <View style={nm.root}>
+                {/* ── Map ── */}
+                <MapView
+                    ref={mapRef}
+                    style={nm.map}
+                    provider={PROVIDER_GOOGLE}
+                    initialRegion={
+                        pickupCoords
+                            ? {
+                                latitude: pickupCoords.latitude,
+                                longitude: pickupCoords.longitude,
+                                latitudeDelta: 0.06,
+                                longitudeDelta: 0.06,
+                            }
+                            : {
+                                latitude: 28.6139,
+                                longitude: 77.209,
+                                latitudeDelta: 0.1,
+                                longitudeDelta: 0.1,
+                            }
+                    }
+                    showsUserLocation={false}
+                    showsMyLocationButton={false}
+                    showsTraffic={false}
+                    showsCompass={false}
+                    onMapReady={() => setMapReady(true)}
+                >
+                    {/* Craneman marker — blue, moving */}
+                    {craneLocation && (
+                        <Marker
+                            coordinate={craneLocation}
+                            title="My Location"
+                            tracksViewChanges={false}
+                            anchor={{ x: 0.5, y: 0.5 }}
+                        >
+                            <View style={nm.craneMarkerWrap}>
+                                <PulseRing color={C.blue} />
+                                <View style={nm.craneMarker}>
+                                    <Icon name="truck" size={18} color={C.white} />
+                                </View>
+                            </View>
+                        </Marker>
+                    )}
+
+                    {/* Pickup marker — orange, fixed */}
+                    {pickupCoords && (
+                        <Marker
+                            coordinate={pickupCoords}
+                            title="Pickup Location"
+                            description={pickupLabel}
+                            tracksViewChanges={false}
+                            anchor={{ x: 0.5, y: 1 }}
+                        >
+                            <View style={nm.pickupMarker}>
+                                <View style={nm.pickupMarkerInner}>
+                                    <Icon name="pin" size={18} color={C.white} />
+                                </View>
+                                <View style={nm.pickupMarkerTip} />
+                            </View>
+                        </Marker>
+                    )}
+
+                    {/* Dashed polyline: crane → pickup */}
+                    {routeCoords.length > 0 && (
+                        <Polyline
+                            coordinates={routeCoords}
+                            strokeColor={C.blue}
+                            strokeWidth={4}
+                            strokeColors={['#2563EB', '#1E40AF']}
+                            lineJoin="round"
+                            lineCap="round"
+                        />
+                    )}
+                    {/* Fallback — agar route load nahi hua to straight dashed line */}
+                    {/* {routeCoords.length === 0 && craneLocation && pickupCoords && (
+                        <Polyline
+                            coordinates={[craneLocation, pickupCoords]}
+                            strokeColor={C.blue}
+                            strokeWidth={2.5}
+                            lineDashPattern={[8, 5]}
+                            strokeOpacity={0.5}
+                        />
+                    )} */}
+                </MapView>
+
+                {/* ── Top Header Overlay ── */}
+                <View style={nm.topBar} pointerEvents="box-none">
+                    <SafeAreaView edges={['top']} style={nm.topInner}>
+                        <TouchableOpacity style={nm.closeBtn} onPress={onClose}>
+                            <Icon name="close" size={18} color={C.text} />
+                        </TouchableOpacity>
+                        <View style={nm.topTitleWrap}>
+                            <Text style={nm.topTitle}>Navigation to Pickup</Text>
+                            <Text style={nm.topSub} numberOfLines={1}>{pickupLabel}</Text>
+                        </View>
+                    </SafeAreaView>
+                </View>
+
+                {/* ── Bottom Info Card ── */}
+                <View style={nm.bottomCard}>
+                    {/* Location error */}
+                    {locationError && (
+                        <View style={nm.errorRow}>
+                            <Icon name="warning" size={13} color="#FCA5A5" />
+                            <Text style={nm.errorText}>{locationError}</Text>
+                        </View>
+                    )}
+
+                    {/* Stats Row */}
+                    <View style={nm.statsRow}>
+                        <View style={nm.statBox}>
+                            <Text style={nm.statVal}>{formatDist(distance)}</Text>
+                            <Text style={nm.statLbl}>Distance</Text>
+                        </View>
+                        <View style={nm.statDivider} />
+                        <View style={nm.statBox}>
+                            <Text style={nm.statVal}>{formatETA(distance)}</Text>
+                            <Text style={nm.statLbl}>ETA</Text>
+                        </View>
+                        <View style={nm.statDivider} />
+                        <View style={nm.statBox}>
+                            <View style={[nm.liveChip, !craneLocation && nm.liveChipWait]}>
+                                <View style={[nm.liveDot, !craneLocation && nm.liveDotWait]} />
+                                <Text style={[nm.liveText, !craneLocation && nm.liveTextWait]}>
+                                    {craneLocation ? 'LIVE' : 'WAIT'}
+                                </Text>
+                            </View>
+                            <Text style={nm.statLbl}>Tracking</Text>
+                        </View>
+                    </View>
+
+                    {/* Address Row */}
+                    <View style={nm.addressRow}>
+                        <View style={[nm.addrIcon, { backgroundColor: C.orangeDim }]}>
+                            <Icon name="pin" size={16} color={C.orange} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={nm.addrLabel}>Pickup Address</Text>
+                            <Text style={nm.addrVal} numberOfLines={2}>
+                                {job?.pickupLocation?.streetAndHouse
+                                    ? `${job.pickupLocation.streetAndHouse}, ${job.pickupLocation.address}`
+                                    : pickupLabel}
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* Open in Google Maps */}
+                    {pickupCoords && (
+                        <TouchableOpacity
+                            style={nm.googleBtn}
+                            onPress={() => openGoogleMaps(pickupCoords.latitude, pickupCoords.longitude)}
+                            activeOpacity={0.85}
+                        >
+                            <LinearGradient colors={['#2563EB', '#1E40AF']} style={nm.googleBtnGrad}>
+                                <Icon name="navigate" size={15} color={C.white} />
+                                <Text style={nm.googleBtnText}>Open in Google Maps</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            </View>
+        </Modal>
+    );
+}
+
+// ─── NavigationMapModal Styles (nm prefix — no conflict with main screen s) ───
+const nm = StyleSheet.create({
+    root: { flex: 1, backgroundColor: '#000' },
+    map: { flex: 1 },
+
+    // Crane marker
+    craneMarkerWrap: {
+        width: 48, height: 48,
+        alignItems: 'center', justifyContent: 'center',
+    },
+    craneMarker: {
+        width: 44, height: 44, borderRadius: 22,
+        backgroundColor: C.blue,
+        alignItems: 'center', justifyContent: 'center',
+        borderWidth: 3, borderColor: C.white,
+        shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 6, elevation: 6,
+    },
+
+    // Pickup marker
+    pickupMarker: { alignItems: 'center' },
+    pickupMarkerInner: {
+        width: 44, height: 44, borderRadius: 22,
+        backgroundColor: C.orange,
+        alignItems: 'center', justifyContent: 'center',
+        borderWidth: 3, borderColor: C.white,
+        shadowColor: C.orange, shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
+    },
+    pickupMarkerTip: {
+        width: 0, height: 0,
+        borderLeftWidth: 8, borderRightWidth: 8, borderTopWidth: 12,
+        borderLeftColor: 'transparent', borderRightColor: 'transparent',
+        borderTopColor: C.orange,
+        marginTop: -2,
+    },
+
+    // Top bar
+    topBar: {
+        position: 'absolute', top: 0, left: 0, right: 0,
+        backgroundColor: 'rgba(255,255,255,0.96)',
+        borderBottomWidth: 1, borderBottomColor: C.divider,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08, shadowRadius: 8, elevation: 4,
+    },
+    topInner: {
+        flexDirection: 'row', alignItems: 'center',
+        paddingHorizontal: 16, paddingBottom: 12, gap: 12,
+    },
+    closeBtn: {
+        width: 40, height: 40, borderRadius: 12,
+        backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center',
+    },
+    topTitleWrap: { flex: 1 },
+    topTitle: { fontSize: 15, fontWeight: '800', color: C.text, letterSpacing: -0.3 },
+    topSub: { fontSize: 11, color: C.textSub, marginTop: 1 },
+
+    // Bottom card
+    bottomCard: {
+        backgroundColor: C.white,
+        borderTopLeftRadius: 24, borderTopRightRadius: 24,
+        paddingHorizontal: 20, paddingTop: 20,
+        paddingBottom: Platform.OS === 'ios' ? 36 : 20,
+        shadowColor: '#000', shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.1, shadowRadius: 16, elevation: 10,
+        gap: 14,
+    },
+
+    // Error
+    errorRow: {
+        flexDirection: 'row', alignItems: 'center', gap: 7,
+        backgroundColor: '#3B0A0A', borderRadius: 8,
+        paddingHorizontal: 12, paddingVertical: 8,
+    },
+    errorText: { color: '#FCA5A5', fontSize: 13, flex: 1 },
+
+    // Stats
+    statsRow: {
+        flexDirection: 'row', alignItems: 'center',
+        backgroundColor: C.bg, borderRadius: 16,
+        paddingVertical: 14, paddingHorizontal: 16,
+    },
+    statBox: { flex: 1, alignItems: 'center', gap: 4 },
+    statVal: { fontSize: 20, fontWeight: '900', color: C.text, letterSpacing: -0.5 },
+    statLbl: {
+        color: C.textMuted, fontSize: 10, fontWeight: '600',
+        letterSpacing: 0.5, textTransform: 'uppercase',
+    },
+    statDivider: { width: 1, height: 36, backgroundColor: C.divider, marginHorizontal: 8 },
+
+    // Live chip
+    liveChip: {
+        flexDirection: 'row', alignItems: 'center', gap: 5,
+        backgroundColor: C.greenDim, paddingHorizontal: 10,
+        paddingVertical: 4, borderRadius: 20,
+    },
+    liveChipWait: { backgroundColor: 'rgba(0,0,0,0.05)' },
+    liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.green },
+    liveDotWait: { backgroundColor: C.textMuted },
+    liveText: { fontSize: 10, fontWeight: '800', color: C.green, letterSpacing: 1 },
+    liveTextWait: { color: C.textMuted },
+
+    // Address
+    addressRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+    addrIcon: {
+        width: 38, height: 38, borderRadius: 12,
+        alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    },
+    addrLabel: {
+        fontSize: 10, color: C.textMuted, fontWeight: '600',
+        letterSpacing: 0.4, marginBottom: 3, textTransform: 'uppercase',
+    },
+    addrVal: { fontSize: 13, color: C.text, fontWeight: '600', lineHeight: 19 },
+
+    // Google Maps button
+    googleBtn: { borderRadius: 16, overflow: 'hidden' },
+    googleBtnGrad: {
+        flexDirection: 'row', alignItems: 'center',
+        justifyContent: 'center', gap: 8, paddingVertical: 15,
+    },
+    googleBtnText: { fontSize: 15, fontWeight: '800', color: C.white, letterSpacing: -0.2 },
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ─── INSPECTION IMAGE MODAL ───────────────────────────────────────────────────
@@ -143,14 +670,10 @@ const handleNavigation = (address) => {
 function InspectionModal({ visible, job, onClose, onSuccess, showToast }) {
     const [images, setImages] = useState([]);
     const [existingImages, setExistingImages] = useState([]);
-    const [loadingExisting, setLoadingExisting] = useState(false);
     const [uploading, setUploading] = useState(false);
 
-    // Fetch existing images when modal opens
     useEffect(() => {
         if (visible && job?._id) {
-            // console.log("job",job)
-            // fetchExistingImages();
             setExistingImages((job.images || []).map(img => img.image));
         }
     }, [visible, job?._id]);
@@ -164,9 +687,7 @@ function InspectionModal({ visible, job, onClose, onSuccess, showToast }) {
             quality: 0.8,
             selectionLimit: 5 - images.length,
         });
-        if (!result.canceled) {
-            setImages(prev => [...prev, ...result.assets.slice(0, 5 - prev.length)]);
-        }
+        if (!result.canceled) setImages(prev => [...prev, ...result.assets.slice(0, 5 - prev.length)]);
     };
 
     const takePhoto = async () => {
@@ -186,17 +707,9 @@ function InspectionModal({ visible, job, onClose, onSuccess, showToast }) {
             const formData = new FormData();
             images.forEach((img, i) => {
                 const ext = img.uri.split('.').pop() || 'jpg';
-                formData.append('images', {
-                    uri: img.uri,
-                    name: `inspection_${i}.${ext}`,
-                    type: `image/${ext === 'jpg' ? 'jpeg' : ext}`,
-                });
+                formData.append('images', { uri: img.uri, name: `inspection_${i}.${ext}`, type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
             });
-            const res = await api.put(
-                `/api/craneman/job/${job._id}/inspection-details`,
-                formData,
-                { headers: { 'Content-Type': 'multipart/form-data' } }
-            );
+            const res = await api.put(`/api/craneman/job/${job._id}/inspection-details`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
             if (res.data?.success) {
                 showToast('Photos uploaded successfully ✓');
                 setImages([]);
@@ -205,19 +718,13 @@ function InspectionModal({ visible, job, onClose, onSuccess, showToast }) {
                 showToast(res.data?.message || 'Upload failed');
             }
         } catch (e) {
-            console.log('Upload error', e);
             showToast('Upload failed. Please try again.');
         } finally {
             setUploading(false);
         }
     };
 
-    const handleClose = () => {
-        setImages([]);
-        setExistingImages([]);
-        onClose();
-    };
-
+    const handleClose = () => { setImages([]); setExistingImages([]); onClose(); };
     const hasExisting = existingImages.length > 0;
 
     return (
@@ -226,84 +733,42 @@ function InspectionModal({ visible, job, onClose, onSuccess, showToast }) {
                 <Pressable style={im.overlay} onPress={handleClose}>
                     <Pressable style={im.sheet} onPress={() => { }}>
                         <View style={im.handle} />
-
-                        {/* Header */}
                         <View style={im.header}>
                             <View>
                                 <Text style={im.title}>Vehicle Inspection Photos</Text>
-                                <Text style={im.sub}>
-                                    {hasExisting ? 'Previously uploaded photos shown below' : 'Upload clear photos of the vehicle (max 5)'}
-                                </Text>
+                                <Text style={im.sub}>{hasExisting ? 'Previously uploaded photos shown below' : 'Upload clear photos of the vehicle (max 5)'}</Text>
                             </View>
-                            <TouchableOpacity onPress={handleClose} style={im.closeBtn}>
-                                <Icon name="x" size={16} color={C.textSub} />
-                            </TouchableOpacity>
+                            <TouchableOpacity onPress={handleClose} style={im.closeBtn}><Icon name="x" size={16} color={C.textSub} /></TouchableOpacity>
                         </View>
-
                         <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: SW * 0.85 }} keyboardShouldPersistTaps="handled">
-
-                            {/* ── Existing Images Section ── */}
-                            {loadingExisting ? (
-                                <View style={im.loadingRow}>
-                                    <ActivityIndicator size="small" color={C.orange} />
-                                    <Text style={im.loadingText}>Checking uploaded photos…</Text>
-                                </View>
-                            ) : hasExisting ? (
+                            {hasExisting && (
                                 <View style={{ marginBottom: 20 }}>
-                                    <View style={im.sectionHead}>
-                                        <View style={[im.sectionDot, { backgroundColor: C.green }]} />
-                                        <Text style={im.sectionTitle}>Previously Uploaded ({existingImages.length})</Text>
-                                    </View>
+                                    <View style={im.sectionHead}><View style={[im.sectionDot, { backgroundColor: C.green }]} /><Text style={im.sectionTitle}>Previously Uploaded ({existingImages.length})</Text></View>
                                     <View style={im.grid}>
                                         {existingImages.map((imgUrl, idx) => (
-                                            <View key={`existing-${idx}`} style={im.imgWrap}>
-                                                <Image
-                                                    source={{ uri: imgUrl }}
-                                                    style={im.img}
-                                                    resizeMode="cover"
-                                                />
-                                                <View style={[im.imgNum, { backgroundColor: 'rgba(22,163,74,0.85)' }]}>
-                                                    <Text style={im.imgNumText}>{idx + 1}</Text>
-                                                </View>
+                                            <View key={idx} style={im.imgWrap}>
+                                                <Image source={{ uri: imgUrl }} style={im.img} resizeMode="cover" />
+                                                <View style={[im.imgNum, { backgroundColor: 'rgba(22,163,74,0.85)' }]}><Text style={im.imgNumText}>{idx + 1}</Text></View>
                                             </View>
                                         ))}
                                     </View>
-                                    {/* Re-upload divider */}
-                                    <View style={im.reUploadDivider}>
-                                        <View style={im.dividerLine} />
-                                        <Text style={im.dividerText}>Re-upload to replace</Text>
-                                        <View style={im.dividerLine} />
-                                    </View>
+                                    <View style={im.reUploadDivider}><View style={im.dividerLine} /><Text style={im.dividerText}>Re-upload to replace</Text><View style={im.dividerLine} /></View>
                                 </View>
-                            ) : null}
-
-                            {/* ── New Images Section ── */}
+                            )}
                             <View style={{ marginBottom: 4 }}>
-                                {hasExisting && (
-                                    <View style={im.sectionHead}>
-                                        <View style={[im.sectionDot, { backgroundColor: C.orange }]} />
-                                        <Text style={im.sectionTitle}>New Photos to Upload</Text>
-                                    </View>
-                                )}
-
-                                {/* Progress dots */}
+                                {hasExisting && <View style={im.sectionHead}><View style={[im.sectionDot, { backgroundColor: C.orange }]} /><Text style={im.sectionTitle}>New Photos to Upload</Text></View>}
                                 <View style={im.progress}>
                                     {[1, 2, 3, 4, 5].map(n => (
                                         <View key={n} style={[im.dot, { backgroundColor: n <= images.length ? C.orange : C.divider, width: n <= images.length ? 20 : 8 }]} />
                                     ))}
                                     <Text style={im.progressText}>{images.length}/5 photos selected</Text>
                                 </View>
-
                                 <View style={im.grid}>
                                     {images.map((img, idx) => (
                                         <View key={idx} style={im.imgWrap}>
                                             <Image source={{ uri: img.uri }} style={im.img} resizeMode="cover" />
-                                            <TouchableOpacity style={im.delBtn} onPress={() => removeImage(idx)}>
-                                                <Icon name="trash" size={11} color={C.white} />
-                                            </TouchableOpacity>
-                                            <View style={im.imgNum}>
-                                                <Text style={im.imgNumText}>{idx + 1}</Text>
-                                            </View>
+                                            <TouchableOpacity style={im.delBtn} onPress={() => removeImage(idx)}><Icon name="trash" size={11} color={C.white} /></TouchableOpacity>
+                                            <View style={im.imgNum}><Text style={im.imgNumText}>{idx + 1}</Text></View>
                                         </View>
                                     ))}
                                     {images.length < 5 && (
@@ -315,26 +780,13 @@ function InspectionModal({ visible, job, onClose, onSuccess, showToast }) {
                                 </View>
                             </View>
                         </ScrollView>
-
-                        {/* Buttons */}
                         <View style={[im.actions, { marginTop: 16 }]}>
-                            <TouchableOpacity
-                                style={[im.cameraBtn, images.length >= 5 && { opacity: 0.4 }]}
-                                onPress={takePhoto}
-                                disabled={images.length >= 5}
-                            >
+                            <TouchableOpacity style={[im.cameraBtn, images.length >= 5 && { opacity: 0.4 }]} onPress={takePhoto} disabled={images.length >= 5}>
                                 <Icon name="camera" size={16} color={C.blue} />
                                 <Text style={im.cameraBtnText}>Camera</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[im.uploadBtn, (images.length === 0 || uploading) && { opacity: 0.5 }]}
-                                onPress={handleUpload}
-                                disabled={images.length === 0 || uploading}
-                            >
-                                {uploading
-                                    ? <ActivityIndicator size="small" color={C.white} />
-                                    : <Icon name="check" size={16} color={C.white} />
-                                }
+                            <TouchableOpacity style={[im.uploadBtn, (images.length === 0 || uploading) && { opacity: 0.5 }]} onPress={handleUpload} disabled={images.length === 0 || uploading}>
+                                {uploading ? <ActivityIndicator size="small" color={C.white} /> : <Icon name="check" size={16} color={C.white} />}
                                 <Text style={im.uploadBtnText}>{uploading ? 'Uploading…' : hasExisting ? 'Replace Photos' : 'Submit Photos'}</Text>
                             </TouchableOpacity>
                         </View>
@@ -352,8 +804,6 @@ const im = StyleSheet.create({
     title: { fontSize: 17, fontWeight: '800', color: C.text, letterSpacing: -0.3 },
     sub: { fontSize: 12, color: C.textSub, marginTop: 3 },
     closeBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-    loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 16, justifyContent: 'center' },
-    loadingText: { fontSize: 12, color: C.textSub },
     sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 10 },
     sectionDot: { width: 7, height: 7, borderRadius: 4 },
     sectionTitle: { fontSize: 11, fontWeight: '700', color: C.textSub, letterSpacing: 0.5, textTransform: 'uppercase' },
@@ -361,7 +811,7 @@ const im = StyleSheet.create({
     dividerLine: { flex: 1, height: 1, backgroundColor: C.divider },
     dividerText: { fontSize: 10, color: C.textMuted, fontWeight: '600' },
     progress: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 12 },
-    dot: { height: 4, borderRadius: 3, backgroundColor: C.divider },
+    dot: { height: 4, borderRadius: 3 },
     progressText: { fontSize: 11, color: C.textSub, fontWeight: '600', marginLeft: 6 },
     grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 10 },
     imgWrap: { width: (SW - 80) / 3, height: (SW - 80) / 3, borderRadius: 12, overflow: 'hidden', position: 'relative' },
@@ -380,10 +830,6 @@ const im = StyleSheet.create({
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ─── PAYMENT MODAL ────────────────────────────────────────────────────────────
-// FIX: TextInput focus issue solved by:
-//   1. Removing React.memo on Field (was breaking re-renders inside modal scroll)
-//   2. Using useRef for each input + returnKeyType chain
-//   3. Using controlled state at modal level, not re-creating Field on each render
 // ═══════════════════════════════════════════════════════════════════════════════
 function PaymentModal({ visible, job, user, onClose, onSuccess, showToast }) {
     const [tab, setTab] = useState('upi');
@@ -393,8 +839,6 @@ function PaymentModal({ visible, job, user, onClose, onSuccess, showToast }) {
     const [ifscCode, setIfscCode] = useState('');
     const [bankName, setBankName] = useState('');
     const [accountHolderName, setAccountHolderName] = useState('');
-
-    // Refs for focus chaining — fixes the "tap again to type" bug
     const upiRef = useRef(null);
     const holderRef = useRef(null);
     const accRef = useRef(null);
@@ -412,172 +856,57 @@ function PaymentModal({ visible, job, user, onClose, onSuccess, showToast }) {
     }, [visible, user]);
 
     const hasAutoFill = !!(user?.upiDetails?.upiId || user?.bankDetails?.accountNumber);
-    const isValid = tab === 'upi'
-        ? upiId.trim().length > 3
-        : accountNumber.trim() && ifscCode.trim() && bankName.trim() && accountHolderName.trim();
+    const isValid = tab === 'upi' ? upiId.trim().length > 3 : accountNumber.trim() && ifscCode.trim() && bankName.trim() && accountHolderName.trim();
 
     const handleSubmit = async () => {
         if (!isValid) { showToast('Please fill all required fields'); return; }
         setSubmitting(true);
         try {
-            const body = {
-                paymentMethod: tab,
-                upiId: tab === 'upi' ? upiId.trim() : '',
-                accountNumber: tab === 'bank' ? accountNumber.trim() : '',
-                ifscCode: tab === 'bank' ? ifscCode.trim() : '',
-                bankName: tab === 'bank' ? bankName.trim() : '',
-                accountHolderName: tab === 'bank' ? accountHolderName.trim() : '',
-            };
+            const body = { paymentMethod: tab, upiId: tab === 'upi' ? upiId.trim() : '', accountNumber: tab === 'bank' ? accountNumber.trim() : '', ifscCode: tab === 'bank' ? ifscCode.trim() : '', bankName: tab === 'bank' ? bankName.trim() : '', accountHolderName: tab === 'bank' ? accountHolderName.trim() : '' };
             const res = await api.put(`/api/craneman/car-payment-update/${job._id}`, body);
-            if (res.data?.success) {
-                showToast('Payment details saved ✓');
-                onSuccess();
-            } else {
-                showToast(res.data?.message || 'Failed to save payment details');
-            }
-        } catch (e) {
-            showToast('Something went wrong. Try again.');
-        } finally {
-            setSubmitting(false);
-        }
+            if (res.data?.success) { showToast('Payment details saved ✓'); onSuccess(); }
+            else showToast(res.data?.message || 'Failed to save payment details');
+        } catch { showToast('Something went wrong. Try again.'); }
+        finally { setSubmitting(false); }
     };
 
     return (
         <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={{ flex: 1 }}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-            >
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
                 <Pressable style={pm.overlay} onPress={onClose}>
                     <Pressable style={pm.sheet} onPress={() => { }}>
                         <View style={pm.handle} />
-
                         <View style={pm.header}>
-                            <View>
-                                <Text style={pm.title}>Payment Details</Text>
-                                <Text style={pm.sub}>Choose how you'd like to receive payment</Text>
-                            </View>
-                            <TouchableOpacity onPress={onClose} style={pm.closeBtn}>
-                                <Icon name="x" size={16} color={C.textSub} />
-                            </TouchableOpacity>
+                            <View><Text style={pm.title}>Payment Details</Text><Text style={pm.sub}>Choose how you'd like to receive payment</Text></View>
+                            <TouchableOpacity onPress={onClose} style={pm.closeBtn}><Icon name="x" size={16} color={C.textSub} /></TouchableOpacity>
                         </View>
-
                         {hasAutoFill && (
                             <View style={pm.autoFillBanner}>
                                 <Icon name="check" size={12} color={C.green} />
                                 <Text style={pm.autoFillText}>Pre-filled from your saved profile — edit if needed</Text>
                             </View>
                         )}
-
                         <View style={pm.tabs}>
-                            <TouchableOpacity style={[pm.tab, tab === 'upi' && pm.tabActive]} onPress={() => setTab('upi')}>
-                                <Icon name="upi" size={14} color={tab === 'upi' ? C.orange : C.textSub} />
-                                <Text style={[pm.tabText, tab === 'upi' && pm.tabTextActive]}>UPI</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[pm.tab, tab === 'bank' && pm.tabActive]} onPress={() => setTab('bank')}>
-                                <Icon name="bank" size={14} color={tab === 'bank' ? C.orange : C.textSub} />
-                                <Text style={[pm.tabText, tab === 'bank' && pm.tabTextActive]}>Bank Transfer</Text>
-                            </TouchableOpacity>
+                            <TouchableOpacity style={[pm.tab, tab === 'upi' && pm.tabActive]} onPress={() => setTab('upi')}><Icon name="upi" size={14} color={tab === 'upi' ? C.orange : C.textSub} /><Text style={[pm.tabText, tab === 'upi' && pm.tabTextActive]}>UPI</Text></TouchableOpacity>
+                            <TouchableOpacity style={[pm.tab, tab === 'bank' && pm.tabActive]} onPress={() => setTab('bank')}><Icon name="bank" size={14} color={tab === 'bank' ? C.orange : C.textSub} /><Text style={[pm.tabText, tab === 'bank' && pm.tabTextActive]}>Bank Transfer</Text></TouchableOpacity>
                         </View>
-
-                        {/* 
-                            FIX: ScrollView with keyboardShouldPersistTaps="always" ensures tapping 
-                            inside the scroll area doesn't dismiss the keyboard or unfocus inputs.
-                            Each TextInput has a ref for focus chaining.
-                        */}
-                        <ScrollView
-                            showsVerticalScrollIndicator={false}
-                            style={{ maxHeight: 300 }}
-                            keyboardShouldPersistTaps="always"
-                        >
+                        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 300 }} keyboardShouldPersistTaps="always">
                             {tab === 'upi' ? (
                                 <View style={pm.fieldWrap}>
                                     <Text style={pm.fieldLabel}>UPI ID *</Text>
-                                    <TextInput
-                                        ref={upiRef}
-                                        style={pm.input}
-                                        value={upiId}
-                                        onChangeText={setUpiId}
-                                        placeholder="yourname@upi"
-                                        placeholderTextColor={C.textMuted}
-                                        keyboardType="email-address"
-                                        autoCapitalize="none"
-                                        returnKeyType="done"
-                                        onSubmitEditing={handleSubmit}
-                                    />
+                                    <TextInput ref={upiRef} style={pm.input} value={upiId} onChangeText={setUpiId} placeholder="yourname@upi" placeholderTextColor={C.textMuted} keyboardType="email-address" autoCapitalize="none" returnKeyType="done" onSubmitEditing={handleSubmit} />
                                 </View>
                             ) : (
                                 <>
-                                    <View style={pm.fieldWrap}>
-                                        <Text style={pm.fieldLabel}>Account Holder Name *</Text>
-                                        <TextInput
-                                            ref={holderRef}
-                                            style={pm.input}
-                                            value={accountHolderName}
-                                            onChangeText={setAccountHolderName}
-                                            placeholder="Full name as per bank"
-                                            placeholderTextColor={C.textMuted}
-                                            autoCapitalize="words"
-                                            returnKeyType="next"
-                                            onSubmitEditing={() => accRef.current?.focus()}
-                                        />
-                                    </View>
-                                    <View style={pm.fieldWrap}>
-                                        <Text style={pm.fieldLabel}>Account Number *</Text>
-                                        <TextInput
-                                            ref={accRef}
-                                            style={pm.input}
-                                            value={accountNumber}
-                                            onChangeText={setAccountNumber}
-                                            placeholder="Enter account number"
-                                            placeholderTextColor={C.textMuted}
-                                            keyboardType="numeric"
-                                            returnKeyType="next"
-                                            onSubmitEditing={() => ifscRef.current?.focus()}
-                                        />
-                                    </View>
-                                    <View style={pm.fieldWrap}>
-                                        <Text style={pm.fieldLabel}>IFSC Code *</Text>
-                                        <TextInput
-                                            ref={ifscRef}
-                                            style={pm.input}
-                                            value={ifscCode}
-                                            onChangeText={setIfscCode}
-                                            placeholder="e.g. SBIN0001234"
-                                            placeholderTextColor={C.textMuted}
-                                            autoCapitalize="characters"
-                                            returnKeyType="next"
-                                            onSubmitEditing={() => bankRef.current?.focus()}
-                                        />
-                                    </View>
-                                    <View style={pm.fieldWrap}>
-                                        <Text style={pm.fieldLabel}>Bank Name *</Text>
-                                        <TextInput
-                                            ref={bankRef}
-                                            style={pm.input}
-                                            value={bankName}
-                                            onChangeText={setBankName}
-                                            placeholder="e.g. State Bank of India"
-                                            placeholderTextColor={C.textMuted}
-                                            autoCapitalize="words"
-                                            returnKeyType="done"
-                                            onSubmitEditing={handleSubmit}
-                                        />
-                                    </View>
+                                    <View style={pm.fieldWrap}><Text style={pm.fieldLabel}>Account Holder Name *</Text><TextInput ref={holderRef} style={pm.input} value={accountHolderName} onChangeText={setAccountHolderName} placeholder="Full name as per bank" placeholderTextColor={C.textMuted} autoCapitalize="words" returnKeyType="next" onSubmitEditing={() => accRef.current?.focus()} /></View>
+                                    <View style={pm.fieldWrap}><Text style={pm.fieldLabel}>Account Number *</Text><TextInput ref={accRef} style={pm.input} value={accountNumber} onChangeText={setAccountNumber} placeholder="Enter account number" placeholderTextColor={C.textMuted} keyboardType="numeric" returnKeyType="next" onSubmitEditing={() => ifscRef.current?.focus()} /></View>
+                                    <View style={pm.fieldWrap}><Text style={pm.fieldLabel}>IFSC Code *</Text><TextInput ref={ifscRef} style={pm.input} value={ifscCode} onChangeText={setIfscCode} placeholder="e.g. SBIN0001234" placeholderTextColor={C.textMuted} autoCapitalize="characters" returnKeyType="next" onSubmitEditing={() => bankRef.current?.focus()} /></View>
+                                    <View style={pm.fieldWrap}><Text style={pm.fieldLabel}>Bank Name *</Text><TextInput ref={bankRef} style={pm.input} value={bankName} onChangeText={setBankName} placeholder="e.g. State Bank of India" placeholderTextColor={C.textMuted} autoCapitalize="words" returnKeyType="done" onSubmitEditing={handleSubmit} /></View>
                                 </>
                             )}
                         </ScrollView>
-
-                        <TouchableOpacity
-                            style={[pm.submitBtn, (!isValid || submitting) && { opacity: 0.5 }]}
-                            onPress={handleSubmit}
-                            disabled={!isValid || submitting}
-                        >
-                            {submitting
-                                ? <ActivityIndicator size="small" color={C.white} />
-                                : <Icon name="check" size={16} color={C.white} />
-                            }
+                        <TouchableOpacity style={[pm.submitBtn, (!isValid || submitting) && { opacity: 0.5 }]} onPress={handleSubmit} disabled={!isValid || submitting}>
+                            {submitting ? <ActivityIndicator size="small" color={C.white} /> : <Icon name="check" size={16} color={C.white} />}
                             <Text style={pm.submitText}>{submitting ? 'Saving…' : 'Save Payment Details'}</Text>
                         </TouchableOpacity>
                     </Pressable>
@@ -598,7 +927,7 @@ const pm = StyleSheet.create({
     autoFillText: { fontSize: 11, color: C.green, fontWeight: '600', flex: 1 },
     tabs: { flexDirection: 'row', backgroundColor: C.bg, borderRadius: 12, padding: 4, marginBottom: 18, gap: 4 },
     tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 9 },
-    tabActive: { backgroundColor: C.white, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.01, shadowRadius: 4, elevation: 2 },
+    tabActive: { backgroundColor: C.white, elevation: 2 },
     tabText: { fontSize: 13, fontWeight: '600', color: C.textSub },
     tabTextActive: { color: C.orange, fontWeight: '800' },
     fieldWrap: { marginBottom: 14 },
@@ -611,53 +940,36 @@ const pm = StyleSheet.create({
 // ═══════════════════════════════════════════════════════════════════════════════
 // ─── ACTIVE JOB CARD ──────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
-function ActiveJobCard({ job, user, onNavigate, onUpdateStatus, showToast }) {
+function ActiveJobCard({ job, user, onUpdateStatus, showToast }) {
     const [showInspection, setShowInspection] = useState(false);
     const [showPayment, setShowPayment] = useState(false);
+    const [showNavMap, setShowNavMap] = useState(false);
     const [imagesUploaded, setImagesUploaded] = useState(false);
     const [paymentDone, setPaymentDone] = useState(false);
 
-    // Reset step state when job changes
-    // useEffect(() => {
-    //     setImagesUploaded(false);
-    //     setPaymentDone(false);
-    // }, [job?._id]);
-
     useEffect(() => {
         if (!job) return;
-
-        // ✅ Images check
         const hasImages = Array.isArray(job.images) && job.images.length > 0;
-
-        // ✅ Payment check (any ONE field has a non-empty value)
         const pd = job.paymentDetails || {};
-
-        const hasPayment =
-            !!pd.upiId?.trim() ||
-            !!pd.accountNumber?.trim() ||
-            !!pd.ifscCode?.trim() ||
-            !!pd.bankName?.trim() ||
-            !!pd.accountHolderName?.trim();
-
+        const hasPayment = !!pd.upiId?.trim() || !!pd.accountNumber?.trim() || !!pd.ifscCode?.trim() || !!pd.bankName?.trim() || !!pd.accountHolderName?.trim();
         setImagesUploaded(hasImages);
         setPaymentDone(hasPayment);
     }, [job]);
 
     if (!job) return null;
+
     const cfg = STATUS[job.status] || STATUS.processing;
     const carName = `${job.carDetail?.make || ''} ${job.carDetail?.model || ''}`.trim() || 'Unknown Car';
     const isInspecting = job.status === 'inspecting';
     const isPickedUp = job.status === 'picked_up';
     const isEnRouteGarage = job.status === 'en_route_to_garage';
-    const isAtGarage = job.status === 'at_garage';
     const canConfirmPickup = imagesUploaded && paymentDone;
 
-    // Status-based next action map
+    const hasPickupCoords = !!(job?.pickupLocation?.latitude && job?.pickupLocation?.longitude);
+
     const nextActions = {
         processing: [{ label: 'Start Journey to Pickup', status: 'en_route', icon: 'navigate', color: C.blue }],
         en_route: [{ label: 'Reached — Start Inspection', status: 'inspecting', icon: 'eye', color: C.yellow }],
-        // inspecting handled separately (2-step)
-        // picked_up handled separately (go to garage prompt)
         en_route_to_garage: [{ label: 'Reached Garage', status: 'at_garage', icon: 'garage', color: C.purple }],
         at_garage: [{ label: 'Mark as Sold', status: 'sold', icon: 'check', color: C.green }],
     };
@@ -669,7 +981,7 @@ function ActiveJobCard({ job, user, onNavigate, onUpdateStatus, showToast }) {
                 <View style={[aj.accentBar, { backgroundColor: cfg.color }]} />
                 <View style={aj.inner}>
 
-                    {/* ── Head ── */}
+                    {/* Head */}
                     <View style={aj.head}>
                         <View style={aj.headLeft}>
                             <Text style={aj.tagText}>ACTIVE JOB</Text>
@@ -681,7 +993,7 @@ function ActiveJobCard({ job, user, onNavigate, onUpdateStatus, showToast }) {
 
                     <View style={aj.divider} />
 
-                    {/* ── Owner ── */}
+                    {/* Owner */}
                     <View style={aj.row}>
                         <View style={[aj.iconBg, { backgroundColor: C.orangeDim }]}>
                             <Icon name="user" size={14} color={C.orange} />
@@ -698,120 +1010,108 @@ function ActiveJobCard({ job, user, onNavigate, onUpdateStatus, showToast }) {
                         )}
                     </View>
 
-                    {/* ── Address ── */}
+                    {/* Address */}
                     <View style={aj.row}>
                         <View style={[aj.iconBg, { backgroundColor: C.blueDim }]}>
                             <Icon name="pin" size={14} color={C.blue} />
                         </View>
                         <View style={{ flex: 1 }}>
                             <Text style={aj.rowLabel}>Pickup Address</Text>
-                            <Text style={aj.rowVal} numberOfLines={2}>{job?.pickupLocation || 'Address not available'}</Text>
+                            <Text style={aj.rowVal} numberOfLines={2}>
+                                {job?.pickupLocation?.streetAndHouse
+                                    ? `${job.pickupLocation.streetAndHouse}, ${job.pickupLocation.address}`
+                                    : job?.pickupLocation?.address || 'Address not available'}
+                            </Text>
                         </View>
                     </View>
 
-                    {/* ── Chips ── */}
+                    {/* Chips */}
                     <View style={aj.chips}>
                         <View style={aj.chip}><Text style={aj.chipText}>{job.kmDriven ? Number(job.kmDriven).toLocaleString() + ' km' : 'N/A'}</Text></View>
                         <View style={aj.chip}><Text style={aj.chipText}>{job.carDetail?.fuelType || 'Petrol'}</Text></View>
                         {job.carDetail?.transmission && <View style={aj.chip}><Text style={aj.chipText}>{job.carDetail.transmission}</Text></View>}
                     </View>
 
-                    {/* ══ INSPECTING: 2-step flow ══ */}
+                    {/* Navigation Map Button */}
+                    {(job.status === 'processing' || job.status === 'en_route' || isInspecting) && hasPickupCoords && (
+                        <TouchableOpacity
+                            style={aj.navMapBtn}
+                            onPress={() => setShowNavMap(true)}
+                            activeOpacity={0.85}
+                        >
+                            <LinearGradient colors={['#2563EB', '#1E40AF']} style={aj.navMapBtnGrad}>
+                                <Icon name="navigate" size={15} color={C.white} />
+                                <Text style={aj.navMapBtnText}>Open Navigation Map</Text>
+                                <View style={aj.navMapBadge}>
+                                    <Text style={aj.navMapBadgeText}>LIVE</Text>
+                                </View>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    )}
+
+                    {/* INSPECTING: 2-step flow */}
                     {isInspecting && (
                         <View style={aj.stepsWrap}>
                             <Text style={aj.stepsHeading}>Complete to confirm pickup</Text>
-
                             <TouchableOpacity style={[aj.stepRow, imagesUploaded && aj.stepRowDone]} onPress={() => setShowInspection(true)} activeOpacity={0.82}>
                                 <View style={[aj.stepNumWrap, { backgroundColor: imagesUploaded ? C.green : C.orange }]}>
-                                    {imagesUploaded
-                                        ? <Icon name="check" size={12} color={C.white} strokeWidth={2.5} />
-                                        : <Text style={aj.stepNum}>1</Text>
-                                    }
+                                    {imagesUploaded ? <Icon name="check" size={12} color={C.white} strokeWidth={2.5} /> : <Text style={aj.stepNum}>1</Text>}
                                 </View>
                                 <View style={[aj.stepIconWrap, { backgroundColor: imagesUploaded ? C.greenDim : C.orangeDim, borderColor: imagesUploaded ? C.greenBorder : C.orangeBorder }]}>
                                     <Icon name="camera" size={16} color={imagesUploaded ? C.green : C.orange} />
                                 </View>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={[aj.stepLabel, imagesUploaded && { color: C.green }]}>
-                                        {imagesUploaded ? 'Photos Uploaded' : 'Upload Vehicle Photos'}
-                                    </Text>
+                                    <Text style={[aj.stepLabel, imagesUploaded && { color: C.green }]}>{imagesUploaded ? 'Photos Uploaded' : 'Upload Vehicle Photos'}</Text>
                                     <Text style={aj.stepSub}>{imagesUploaded ? 'Tap to re-upload if needed' : 'Required — up to 5 photos'}</Text>
                                 </View>
                                 <Icon name="chevron" size={14} color={imagesUploaded ? C.green : C.textMuted} />
                             </TouchableOpacity>
-
                             <TouchableOpacity style={[aj.stepRow, paymentDone && aj.stepRowDone]} onPress={() => setShowPayment(true)} activeOpacity={0.82}>
                                 <View style={[aj.stepNumWrap, { backgroundColor: paymentDone ? C.green : C.blue }]}>
-                                    {paymentDone
-                                        ? <Icon name="check" size={12} color={C.white} strokeWidth={2.5} />
-                                        : <Text style={aj.stepNum}>2</Text>
-                                    }
+                                    {paymentDone ? <Icon name="check" size={12} color={C.white} strokeWidth={2.5} /> : <Text style={aj.stepNum}>2</Text>}
                                 </View>
                                 <View style={[aj.stepIconWrap, { backgroundColor: paymentDone ? C.greenDim : C.blueDim, borderColor: paymentDone ? C.greenBorder : 'rgba(37,99,235,0.2)' }]}>
                                     <Icon name="upi" size={16} color={paymentDone ? C.green : C.blue} />
                                 </View>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={[aj.stepLabel, paymentDone && { color: C.green }]}>
-                                        {paymentDone ? 'Payment Details Saved' : 'Add Payment Details'}
-                                    </Text>
+                                    <Text style={[aj.stepLabel, paymentDone && { color: C.green }]}>{paymentDone ? 'Payment Details Saved' : 'Add Payment Details'}</Text>
                                     <Text style={aj.stepSub}>{paymentDone ? 'Tap to update' : 'UPI or bank account'}</Text>
                                 </View>
                                 <Icon name="chevron" size={14} color={paymentDone ? C.green : C.textMuted} />
                             </TouchableOpacity>
-
                             <TouchableOpacity
                                 style={[aj.confirmBtn, !canConfirmPickup && aj.confirmBtnLocked]}
                                 onPress={() => canConfirmPickup && onUpdateStatus(job._id, 'picked_up')}
                                 activeOpacity={canConfirmPickup ? 0.82 : 1}
                             >
-                                {!canConfirmPickup
-                                    ? <Icon name="lock" size={15} color={C.textMuted} />
-                                    : <Icon name="truck" size={15} color={C.white} />
-                                }
-                                <Text style={[aj.confirmBtnText, !canConfirmPickup && { color: C.textMuted }]}>
-                                    Confirm Pickup
-                                </Text>
+                                {!canConfirmPickup ? <Icon name="lock" size={15} color={C.textMuted} /> : <Icon name="truck" size={15} color={C.white} />}
+                                <Text style={[aj.confirmBtnText, !canConfirmPickup && { color: C.textMuted }]}>Confirm Pickup</Text>
                             </TouchableOpacity>
-
                             {!canConfirmPickup && (
                                 <Text style={aj.lockHint}>
-                                    {!imagesUploaded && !paymentDone
-                                        ? 'Complete both steps above to unlock'
-                                        : !imagesUploaded
-                                            ? 'Upload vehicle photos to unlock'
-                                            : 'Save payment details to unlock'}
+                                    {!imagesUploaded && !paymentDone ? 'Complete both steps above to unlock' : !imagesUploaded ? 'Upload vehicle photos to unlock' : 'Save payment details to unlock'}
                                 </Text>
                             )}
                         </View>
                     )}
 
-                    {/* ══ PICKED UP: Go to garage ══ */}
+                    {/* PICKED UP */}
                     {isPickedUp && (
                         <View style={aj.stepsWrap}>
                             <View style={aj.garageInfoBox}>
                                 <Icon name="check" size={15} color={C.green} />
                                 <Text style={aj.garageInfoText}>Car has been picked up successfully!</Text>
                             </View>
-                            <TouchableOpacity
-                                style={[aj.confirmBtn, { backgroundColor: C.blue }]}
-                                onPress={() => onUpdateStatus(job._id, 'en_route_to_garage')}
-                                activeOpacity={0.82}
-                            >
+                            <TouchableOpacity style={[aj.confirmBtn, { backgroundColor: C.blue }]} onPress={() => onUpdateStatus(job._id, 'en_route_to_garage')} activeOpacity={0.82}>
                                 <Icon name="truck" size={15} color={C.white} />
                                 <Text style={aj.confirmBtnText}>Head to Garage</Text>
                             </TouchableOpacity>
                         </View>
                     )}
 
-                    {/* ══ OTHER STATUSES: Standard actions ══ */}
+                    {/* OTHER STATUSES */}
                     {!isInspecting && !isPickedUp && actions.length > 0 && (
                         <View style={aj.actions}>
-                            {(job.status === 'processing' || job.status === 'en_route') && (
-                                <TouchableOpacity style={aj.navBtn} onPress={onNavigate} activeOpacity={0.8}>
-                                    <Icon name="navigate" size={14} color={C.blue} />
-                                    <Text style={[aj.navText, { color: C.blue }]}>Directions</Text>
-                                </TouchableOpacity>
-                            )}
                             {actions.map((a) => (
                                 <TouchableOpacity
                                     key={a.status}
@@ -826,20 +1126,11 @@ function ActiveJobCard({ job, user, onNavigate, onUpdateStatus, showToast }) {
                         </View>
                     )}
 
-                    {/* Directions always available during inspection */}
-                    {isInspecting && (
-                        <TouchableOpacity style={[aj.navBtn, { marginTop: 10, alignSelf: 'flex-start' }]} onPress={onNavigate}>
-                            <Icon name="navigate" size={14} color={C.blue} />
-                            <Text style={[aj.navText, { color: C.blue }]}>Open Directions</Text>
-                        </TouchableOpacity>
-                    )}
-
-                    {/* Directions during en_route_to_garage */}
                     {isEnRouteGarage && job.garageLocation && (
-                        <TouchableOpacity
-                            style={[aj.navBtn, { marginTop: 8, alignSelf: 'flex-start' }]}
-                            onPress={() => handleNavigation(job.garageLocation)}
-                        >
+                        <TouchableOpacity style={[aj.navBtn, { marginTop: 8, alignSelf: 'flex-start' }]} onPress={() => {
+                            const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(job.garageLocation)}&travelmode=driving`;
+                            Linking.openURL(url);
+                        }}>
                             <Icon name="navigate" size={14} color={C.blue} />
                             <Text style={[aj.navText, { color: C.blue }]}>Directions to Garage</Text>
                         </TouchableOpacity>
@@ -847,21 +1138,14 @@ function ActiveJobCard({ job, user, onNavigate, onUpdateStatus, showToast }) {
                 </View>
             </View>
 
-            <InspectionModal
-                visible={showInspection}
+            {/* NavigationMapModal */}
+            <NavigationMapModal
+                visible={showNavMap}
                 job={job}
-                onClose={() => setShowInspection(false)}
-                onSuccess={() => { setImagesUploaded(true); setShowInspection(false); }}
-                showToast={showToast}
+                onClose={() => setShowNavMap(false)}
             />
-            <PaymentModal
-                visible={showPayment}
-                job={job}
-                user={user}
-                onClose={() => setShowPayment(false)}
-                onSuccess={() => { setPaymentDone(true); setShowPayment(false); }}
-                showToast={showToast}
-            />
+            <InspectionModal visible={showInspection} job={job} onClose={() => setShowInspection(false)} onSuccess={() => { setImagesUploaded(true); setShowInspection(false); }} showToast={showToast} />
+            <PaymentModal visible={showPayment} job={job} user={user} onClose={() => setShowPayment(false)} onSuccess={() => { setPaymentDone(true); setShowPayment(false); }} showToast={showToast} />
         </>
     );
 }
@@ -884,7 +1168,11 @@ const aj = StyleSheet.create({
     chips: { flexDirection: 'row', gap: 6, marginBottom: 14, flexWrap: 'wrap' },
     chip: { backgroundColor: C.bg, borderWidth: 1, borderColor: C.divider, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
     chipText: { fontSize: 10, color: C.textSub, fontWeight: '600' },
-    // Steps
+    navMapBtn: { borderRadius: 14, overflow: 'hidden', marginBottom: 14 },
+    navMapBtnGrad: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 13 },
+    navMapBtnText: { fontSize: 13, fontWeight: '800', color: C.white, flex: 1 },
+    navMapBadge: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+    navMapBadgeText: { fontSize: 9, fontWeight: '900', color: C.white, letterSpacing: 1 },
     stepsWrap: { borderTopWidth: 1, borderTopColor: C.divider, paddingTop: 14, gap: 9 },
     stepsHeading: { fontSize: 11, fontWeight: '700', color: C.textMuted, letterSpacing: 0.6, marginBottom: 4, textTransform: 'uppercase' },
     stepRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.bg, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: C.cardBorder },
@@ -900,7 +1188,6 @@ const aj = StyleSheet.create({
     confirmBtnLocked: { backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.cardBorder },
     confirmBtnText: { fontSize: 14, fontWeight: '800', color: C.white },
     lockHint: { fontSize: 10, color: C.textMuted, textAlign: 'center', fontStyle: 'italic' },
-    // Normal actions
     actions: { flexDirection: 'row', gap: 8 },
     navBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 13, paddingVertical: 11, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(37,99,235,0.3)', backgroundColor: C.blueDim },
     navText: { fontSize: 12, fontWeight: '700' },
@@ -908,7 +1195,6 @@ const aj = StyleSheet.create({
     actionBtnText: { fontSize: 13, fontWeight: '800', color: C.white },
 });
 
-// ─── Job List Item ─────────────────────────────────────────────────────────────
 function JobItem({ job, onPress }) {
     const cfg = STATUS[job.status] || STATUS.processing;
     const carName = `${job.carDetail?.make || ''} ${job.carDetail?.model || ''}`.trim() || 'Unknown Car';
@@ -916,18 +1202,14 @@ function JobItem({ job, onPress }) {
     return (
         <TouchableOpacity style={ji.wrap} onPress={() => onPress(job._id)} activeOpacity={0.75}>
             <View style={[ji.accentLine, { backgroundColor: cfg.color }]} />
-            <View style={[ji.iconBg, { backgroundColor: cfg.dim }]}>
-                <Icon name="car" size={16} color={cfg.color} />
-            </View>
+            <View style={[ji.iconBg, { backgroundColor: cfg.dim }]}><Icon name="car" size={16} color={cfg.color} /></View>
             <View style={ji.body}>
                 <Text style={ji.name} numberOfLines={1}>{carName} {year}</Text>
                 <Text style={ji.meta} numberOfLines={1}>{job.rcNumber || '—'}  ·  {job?.carDetail?.ownerName || 'N/A'}</Text>
             </View>
             <View style={ji.right}>
                 <Badge status={job.status} />
-                <View style={{ marginTop: 6, alignItems: 'flex-end' }}>
-                    <Icon name="chevron" size={13} color={C.textMuted} />
-                </View>
+                <View style={{ marginTop: 6, alignItems: 'flex-end' }}><Icon name="chevron" size={13} color={C.textMuted} /></View>
             </View>
         </TouchableOpacity>
     );
@@ -973,30 +1255,21 @@ export default function CraneManHome() {
     }, []);
 
     const updateJobStatus = async (jobId, newStatus) => {
-        console.log("newStatus", newStatus)
-        if (newStatus === 'en_route') {
-            await startLocationTracking();
-        } else if(newStatus === 'inspecting'){
-            await stopLocationTracking();
-        } else if (newStatus === 'en_route_to_garage') {
-            await startLocationTracking();
-        } else if (newStatus === 'at_garage') {
-            await stopLocationTracking();
-        };
+        if (newStatus === 'en_route') await startLocationTracking();
+        else if (newStatus === 'inspecting') await stopLocationTracking();
+        else if (newStatus === 'en_route_to_garage') await startLocationTracking();
+        else if (newStatus === 'at_garage') await stopLocationTracking();
         try {
             const res = await api.patch(`/api/craneman/job/${jobId}/status`, { status: newStatus });
             if (res.data?.success) {
                 setJobs(prev => prev.map(j => j._id === jobId ? { ...j, status: newStatus } : j));
                 toast(`Status updated to ${STATUS[newStatus]?.label || newStatus}`);
-            } else {
-                toast(res.data?.message || 'Failed to update status');
-            }
-        } catch (e) {
-            toast('Update failed. Try again.');
-        }
+            } else toast(res.data?.message || 'Failed to update status');
+        } catch { toast('Update failed. Try again.'); }
     };
 
     useEffect(() => { fetchUser(); fetchJobs(); }, []);
+
 
     const onRefresh = async () => {
         setRefresh(true);
@@ -1018,31 +1291,26 @@ export default function CraneManHome() {
     };
 
     return (
-        <View style={s.root}>
-            <ScrollView
-                showsVerticalScrollIndicator={false}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.orange} />}
-            >
-                {/* ── Header ── */}
-                {/* <LinearGradient colors={['#F05A28', '#FF8C55']} style={s.header}> */}
-                <LinearGradient colors={['#1356CC', '#2176FF']} style={s.header}>
-                    <View style={s.dec1} />
-                    <View style={s.dec2} />
+        <View style={scr.root}>
+            <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.orange} />}>
+                <LinearGradient colors={['#1356CC', '#2176FF']} style={scr.header}>
+                    <View style={scr.dec1} />
+                    <View style={scr.dec2} />
                     <SafeAreaView edges={['top']}>
-                        <View style={s.headerRow}>
+                        <View style={scr.headerRow}>
                             <View style={{ flex: 1 }}>
-                                <Text style={s.greet}>{greeting()}</Text>
-                                <Text style={s.name}>{user?.name || 'Crane Operator'}</Text>
-                                <View style={s.roleTag}>
+                                <Text style={scr.greet}>{greeting()}</Text>
+                                <Text style={scr.name}>{user?.name || 'Crane Operator'}</Text>
+                                <View style={scr.roleTag}>
                                     <Icon name="truck" size={10} color="#fff" />
-                                    <Text style={s.roleText}>Crane Specialist</Text>
+                                    <Text style={scr.roleText}>Crane Specialist</Text>
                                 </View>
                             </View>
-                            <View style={s.avatar}>
-                                <Text style={s.avatarText}>{(user?.name || 'C').charAt(0).toUpperCase()}</Text>
+                            <View style={scr.avatar}>
+                                <Text style={scr.avatarText}>{(user?.name || 'C').charAt(0).toUpperCase()}</Text>
                             </View>
                         </View>
-                        <View style={s.stats}>
+                        <View style={scr.stats}>
                             <StatTile value={totalJobs} label="Total" />
                             <View style={{ width: 8 }} />
                             <StatTile value={activeCount} label="Active" />
@@ -1052,48 +1320,45 @@ export default function CraneManHome() {
                     </SafeAreaView>
                 </LinearGradient>
 
-                <View style={s.body}>
+                <View style={scr.body}>
                     {loading ? (
-                        <View style={s.loadWrap}>
+                        <View style={scr.loadWrap}>
                             <ActivityIndicator size="small" color={C.orange} />
-                            <Text style={s.loadText}>Loading your assignments…</Text>
+                            <Text style={scr.loadText}>Loading your assignments…</Text>
                         </View>
                     ) : activeJob ? (
                         <>
-                            <View style={s.secHead}>
-                                <View style={s.secDot} />
-                                <Text style={s.secTitle}>Active Assignment</Text>
+                            <View style={scr.secHead}>
+                                <View style={scr.secDot} />
+                                <Text style={scr.secTitle}>Active Assignment</Text>
                             </View>
                             <ActiveJobCard
                                 job={activeJob}
                                 user={user}
-                                onNavigate={() => handleNavigation(activeJob.pickupLocation || '')}
                                 onUpdateStatus={updateJobStatus}
                                 showToast={toast}
                             />
                         </>
                     ) : (
-                        <View style={s.idle}>
-                            <View style={s.idleIcon}>
-                                <Icon name="clock" size={28} color={C.textMuted} />
-                            </View>
-                            <Text style={s.idleTitle}>No Active Assignment</Text>
-                            <Text style={s.idleSub}>You'll be notified when a new job is assigned.</Text>
+                        <View style={scr.idle}>
+                            <View style={scr.idleIcon}><Icon name="clock" size={28} color={C.textMuted} /></View>
+                            <Text style={scr.idleTitle}>No Active Assignment</Text>
+                            <Text style={scr.idleSub}>You'll be notified when a new job is assigned.</Text>
                         </View>
                     )}
 
                     {recentJobs.length > 0 && (
                         <>
-                            <View style={[s.secHead, { marginTop: 6 }]}>
-                                <View style={[s.secDot, { backgroundColor: C.textMuted }]} />
-                                <Text style={s.secTitle}>Recent Jobs</Text>
+                            <View style={[scr.secHead, { marginTop: 6 }]}>
+                                <View style={[scr.secDot, { backgroundColor: C.textMuted }]} />
+                                <Text style={scr.secTitle}>Recent Jobs</Text>
                                 {jobs.length > 6 && (
                                     <TouchableOpacity style={{ marginLeft: 'auto' }} onPress={() => navigation.navigate('AllJobs')}>
-                                        <Text style={s.seeAll}>See all →</Text>
+                                        <Text style={scr.seeAll}>See all →</Text>
                                     </TouchableOpacity>
                                 )}
                             </View>
-                            <View style={s.list}>
+                            <View style={scr.list}>
                                 {recentJobs.map(job => (
                                     <JobItem key={job._id} job={job} onPress={(id) => navigation.navigate('SoldCarDetails', { carId: id })} />
                                 ))}
@@ -1102,23 +1367,23 @@ export default function CraneManHome() {
                     )}
 
                     {!loading && jobs.length === 0 && (
-                        <View style={s.empty}>
+                        <View style={scr.empty}>
                             <Icon name="warning" size={32} color={C.textMuted} />
-                            <Text style={s.emptyTitle}>No Jobs Yet</Text>
-                            <Text style={s.emptySub}>Your assigned pickups will appear here.</Text>
+                            <Text style={scr.emptyTitle}>No Jobs Yet</Text>
+                            <Text style={scr.emptySub}>Your assigned pickups will appear here.</Text>
                         </View>
                     )}
 
                     <View style={{ height: 50 }} />
                 </View>
             </ScrollView>
-
             <Toast message={toastMsg} />
         </View>
     );
 }
 
-const s = StyleSheet.create({
+// ─── Main Screen Styles (scr prefix — renamed from s to avoid any confusion) ──
+const scr = StyleSheet.create({
     root: { flex: 1, backgroundColor: C.bg },
     header: { paddingBottom: 24, overflow: 'hidden' },
     dec1: { position: 'absolute', top: -60, right: -60, width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,255,255,0.12)' },

@@ -940,7 +940,7 @@ export default function AllCars() {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {car.pickupLocation || "—"}
+                            {`${car.pickupLocation?.streetAndHouse || "—"}, ${car.pickupLocation?.address || "—"}`}
                           </span>
                         </div>
                       </td>

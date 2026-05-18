@@ -113,7 +113,7 @@ export default function UserHome() {
     if (isRefresh) setRefreshing(true); else setLoading(true);
     try {
       const res = await api.get('/api/car/car-details-for-me');
-      if (res.data?.success) setCars(res.data.data || []);
+      if (res.data?.success) setCars(res.data.data.reverse() || []);
       else showToast(res.data?.message || 'Failed to load cars');
     } catch (e) { showToast('Something went wrong. Please try again.'); }
     finally { setLoading(false); setRefreshing(false); }
