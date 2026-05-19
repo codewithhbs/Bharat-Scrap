@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.1.13:4023/api';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://www.api.bharatscrapfacilities.com/api';
 
 /* ─── Shared style tokens ─── */
 const C = {
