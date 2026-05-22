@@ -24,6 +24,7 @@ import {
   Recycle,
 } from "lucide-react";
 import api from "../utils/api";
+import axios from "axios";
 
 const COLORS = {
   green: {
@@ -173,8 +174,8 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    api
-      .get("/admin/dashboard-data")
+    axios
+      .get("https://www.api.bharatscrapfacilities.com/api/admin/dashboard-data")
       .then((res) => setData(res.data.data))
       .catch((err) => setError(err.message || "Something went wrong"))
       .finally(() => setLoading(false));

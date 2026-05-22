@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 // import toast from "react-hot-toast";
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://www.api.bharatscrapfacilities.com";
+  process.env.NEXT_PUBLIC_API_URL || "https://www.api.bharatscrapfacilities.com";
 
 const api = axios.create({
   baseURL: API_BASE,

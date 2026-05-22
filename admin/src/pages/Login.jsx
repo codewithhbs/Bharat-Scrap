@@ -32,7 +32,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const res = await axios.post("http://www.api.bharatscrapfacilities.com/api/admin/admin-login", {
+      const res = await axios.post("https://www.api.bharatscrapfacilities.com/api/admin/admin-login", {
         email: form.email,
         password: form.password,
       });

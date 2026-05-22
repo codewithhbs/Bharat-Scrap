@@ -11,7 +11,7 @@ import { Colors } from '../constants/colors';
 import Toast from '../components/Toast';
 import api from '../lib/api';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
-const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAP_API;
+const GOOGLE_PLACES_API_KEY = 'AIzaSyD022IF_7EVi9DEqKBizpz6vXM_nuFeE1g';
 function PageHeader({ title, onBack }) {
   return (
     <View style={styles.header}>

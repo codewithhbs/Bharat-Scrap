@@ -39,42 +39,42 @@ async function carRegister(req, res) {
             // });
         }
 
-        // const carDetailWithRC = await getCarDetailsFromRC(rcNumber);
-        // console.log("carDetailWithRC", carDetailWithRC)
+        const carDetailWithRC = await getCarDetailsFromRC(rcNumber);
+        console.log("carDetailWithRC", carDetailWithRC)
 
         // ============== DUMMY DATA FOR NOW ==============
-        const carDetailWithRC = {
-            rcNumber: rcNumber,
-            registrationDate: "2022-05-15",
-            ownerName: "Amit Sharma",
-            fatherName: "Rajesh Sharma",
-            address: "Flat No. 402, Green Park, New Delhi - 110016",
-            vehicleClass: "LMV",
-            fuelType: "Petrol",
-            make: "Hyundai",
-            model: "Creta",
-            manufacturingYear: 2022,
-            chassisNumber: "MAH12345678901234",
-            engineNumber: "G4FC123456789",
-            color: "Pearl White",
-            seatingCapacity: 5,
-            standingCapacity: 0,
-            unladenWeight: 1400,
-            grossVehicleWeight: 1850,
-            bodyType: "SUV",
-            registrationValidity: "2032-05-14",
-            insuranceValidity: "2027-05-14",
-            pollutionValidity: "2026-12-31",
-            status: "Active",
-            rtoOffice: "New Delhi - Rohini (DL-13)",
-            vehicleCategory: "Private"
-        };
+        // const carDetailWithRC = {
+        //     rcNumber: rcNumber,
+        //     registrationDate: "2022-05-15",
+        //     ownerName: "Amit Sharma",
+        //     fatherName: "Rajesh Sharma",
+        //     address: "Flat No. 402, Green Park, New Delhi - 110016",
+        //     vehicleClass: "LMV",
+        //     fuelType: "Petrol",
+        //     make: "Hyundai",
+        //     model: "Creta",
+        //     manufacturingYear: 2022,
+        //     chassisNumber: "MAH12345678901234",
+        //     engineNumber: "G4FC123456789",
+        //     color: "Pearl White",
+        //     seatingCapacity: 5,
+        //     standingCapacity: 0,
+        //     unladenWeight: 1400,
+        //     grossVehicleWeight: 1850,
+        //     bodyType: "SUV",
+        //     registrationValidity: "2032-05-14",
+        //     insuranceValidity: "2027-05-14",
+        //     pollutionValidity: "2026-12-31",
+        //     status: "Active",
+        //     rtoOffice: "New Delhi - Rohini (DL-13)",
+        //     vehicleCategory: "Private"
+        // };
         // ================================================
 
         const carData = {
             seller: userId,
             rcNumber,
-            carDetail: carDetailWithRC,
+            carDetail: carDetailWithRC.carData,
             onlyForCheck: onlyForCheck || false
         };
 
@@ -307,10 +307,29 @@ async function fetchCarDetailById(req, res) {
     }
 }
 
+async function testRcDetail(req, res) {
+    try {
+        const { rcNumber } = req.params;
+        const carDetailWithRC = await getCarDetailsFromRC(rcNumber);
+        return res.status(200).json({
+            success: true,
+            message: "Car details fetched successfully",
+            data: carDetailWithRC
+        });
+    } catch (error) {
+        console.log("Internal server error", error)
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        })
+    }
+}
+
 module.exports = {
     carRegister,
     carDetailUpdate,
     approveForCarSale,
     fetchCarDetailForMe,
-    fetchCarDetailById
+    fetchCarDetailById,
+    testRcDetail
 };

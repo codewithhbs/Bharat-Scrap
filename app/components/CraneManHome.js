@@ -3,7 +3,7 @@ import {
     View, Text, ScrollView, TouchableOpacity, StyleSheet,
     ActivityIndicator, RefreshControl, Modal, Image,
     TextInput, KeyboardAvoidingView, Platform, Linking,
-    Dimensions, Pressable, Animated, PermissionsAndroid
+    Dimensions, Pressable, Animated
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,11 +14,18 @@ import api from '../lib/api';
 import Toast from './Toast';
 import { useNavigation } from '@react-navigation/native';
 import { startLocationTracking, stopLocationTracking } from '../services/locationService';
-import Geolocation from '@react-native-community/geolocation';
+// import Geolocation from '@react-native-community/geolocation';
+import * as ExpoLocation from 'expo-location';
+
+// Geolocation.setRNConfiguration({
+//     skipPermissionRequests: false,
+//     authorizationLevel: 'whenInUse',
+//     locationProvider: 'auto',
+// });
 
 const { width: SW } = Dimensions.get('window');
 
-const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAP_API;
+const GOOGLE_MAPS_API_KEY = 'AIzaSyD022IF_7EVi9DEqKBizpz6vXM_nuFeE1g';
 
 // ─── Color Palette ─────────────────────────────────────────────────────────────
 const C = {
@@ -166,13 +173,13 @@ const st = StyleSheet.create({
 });
 
 const handleCall = async (phone) => {
-  try {
-    const url = `tel:${phone}`;
+    try {
+        const url = `tel:${phone}`;
 
-    await Linking.openURL(url);
-  } catch (e) {
-    console.log('Call failed:', e);
-  }
+        await Linking.openURL(url);
+    } catch (e) {
+        console.log('Call failed:', e);
+    }
 };
 function openGoogleMaps(lat, lng) {
     const url =
@@ -222,7 +229,7 @@ function NavigationMapModal({ visible, job, onClose }) {
     const [mapReady, setMapReady] = useState(false);
     const [locationError, setLocationError] = useState(null);
     const [routeCoords, setRouteCoords] = useState([]);
-
+    // console.log("job",job)
     // Pickup coords — fixed (user ki location)
     const pickupCoords =
         job?.pickupLocation?.latitude && job?.pickupLocation?.longitude
@@ -238,87 +245,79 @@ function NavigationMapModal({ visible, job, onClose }) {
         'Pickup Location';
 
     // Android permission
-    const requestAndroidPermission = async () => {
-        if (Platform.OS !== 'android') return true;
-        const granted = await PermissionsAndroid.request(
-            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-            {
-                title: 'Location Permission',
-                message: 'App needs your location to navigate to pickup.',
-                buttonPositive: 'OK',
-            }
-        );
-        return granted === PermissionsAndroid.RESULTS.GRANTED;
-    };
+    // Replace requestAndroidPermission:
+const requestPermission = async () => {
+    const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
+    return status === 'granted';
+};
 
-    // Start watching craneman (meri) location
-    const startWatch = async () => {
-        const hasPermission = await requestAndroidPermission();
-        if (!hasPermission) {
-            setLocationError('Location permission denied');
-            return;
+// Replace startWatch entirely:
+const startWatch = async () => {
+    const hasPermission = await requestPermission();
+    if (!hasPermission) {
+        setLocationError('Location permission denied');
+        return;
+    }
+
+    // Fast one-time fix first
+    try {
+        const pos = await ExpoLocation.getCurrentPositionAsync({
+            accuracy: ExpoLocation.Accuracy.Balanced,
+        });
+        const coords = {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+        };
+        setCraneLocation(coords);
+        if (pickupCoords) {
+            setDistance(getDistanceKm(
+                coords.latitude, coords.longitude,
+                pickupCoords.latitude, pickupCoords.longitude
+            ));
+            fetchRoute(coords, pickupCoords);
         }
+    } catch (e) {
+        setLocationError('Location unavailable: ' + e.message);
+    }
 
-        // Fast one-time fix first
-        Geolocation.getCurrentPosition(
-            (pos) => {
-                const coords = {
-                    latitude: pos.coords.latitude,
-                    longitude: pos.coords.longitude,
-                };
-                setCraneLocation(coords);
-                if (pickupCoords) {
-                    setDistance(getDistanceKm(
-                        coords.latitude, coords.longitude,
-                        pickupCoords.latitude, pickupCoords.longitude
-                    ));
-                    fetchRoute(coords, pickupCoords);
+    // Then live watch
+    const sub = await ExpoLocation.watchPositionAsync(
+        {
+            accuracy: ExpoLocation.Accuracy.Balanced,
+            distanceInterval: 10,
+            timeInterval: 5000,
+        },
+        (pos) => {
+            const updated = {
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude,
+            };
+            setCraneLocation(updated);
+            if (pickupCoords) {
+                setDistance(getDistanceKm(
+                    updated.latitude, updated.longitude,
+                    pickupCoords.latitude, pickupCoords.longitude
+                ));
+                const prevCoords = prevCraneRef.current;
+                const moved = prevCoords
+                    ? getDistanceKm(prevCoords.latitude, prevCoords.longitude, updated.latitude, updated.longitude)
+                    : 1;
+                if (moved > 0.1) {
+                    fetchRoute(updated, pickupCoords);
+                    prevCraneRef.current = updated;
                 }
-            },
-            (err) => setLocationError('Location unavailable: ' + err.message),
-            { enableHighAccuracy: true, timeout: 10000 }
-        );
-
-        // Then live watch
-        watchId.current = Geolocation.watchPosition(
-            (pos) => {
-                const updated = {
-                    latitude: pos.coords.latitude,
-                    longitude: pos.coords.longitude,
-                };
-                setCraneLocation(updated);
-                if (pickupCoords) {
-                    setDistance(getDistanceKm(
-                        updated.latitude, updated.longitude,
-                        pickupCoords.latitude, pickupCoords.longitude
-                    ));
-                    // watchPosition ke andar, setDistance ke baad:
-                    const prevCoords = prevCraneRef.current;
-                    const moved = prevCoords
-                        ? getDistanceKm(prevCoords.latitude, prevCoords.longitude, updated.latitude, updated.longitude)
-                        : 1;
-                    if (moved > 0.1) { // 100m se zyada move kiya tab hi re-fetch
-                        fetchRoute(updated, pickupCoords);
-                        prevCraneRef.current = updated;
-                    }
-                }
-            },
-            (err) => console.warn('Watch error:', err.message),
-            {
-                enableHighAccuracy: true,
-                distanceFilter: 10,
-                interval: 5000,
-                fastestInterval: 3000,
             }
-        );
-    };
+        }
+    );
+    watchId.current = sub;
+};
 
     const stopWatch = () => {
-        if (watchId.current !== null) {
-            Geolocation.clearWatch(watchId.current);
-            watchId.current = null;
-        }
-    };
+    if (watchId.current !== null) {
+        watchId.current.remove(); // expo-location uses .remove() not clearWatch
+        watchId.current = null;
+    }
+};
 
     const fetchRoute = async (origin, destination) => {
         try {

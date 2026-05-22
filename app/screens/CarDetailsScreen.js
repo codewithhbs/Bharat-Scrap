@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Svg, Path, Circle, Rect, Line, Polyline, Ellipse } from 'react-native-svg';
+import { Svg, Path, Circle, Rect, Line, Ellipse } from 'react-native-svg';
 import { Colors } from '../constants/colors';
 
 function PageHeader({ title, onBack }) {
@@ -65,141 +65,258 @@ function CarSVG() {
   );
 }
 
+// ── Helper: empty/null/false check ──────────────────────────────────────────
+function val(v) {
+  if (v === null || v === undefined || v === '' || v === 'Na' || v === 'N/A') return null;
+  if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+  return String(v);
+}
+
+// ── Reusable section card ────────────────────────────────────────────────────
+function InfoCard({ title, accent = 'blue', rows = [] }) {
+  const filtered = rows.filter(r => val(r.v) !== null);
+  if (filtered.length === 0) return null;
+
+  const bg = accent === 'green' ? Colors.green50 : accent === 'orange' ? '#FFF7ED' : Colors.blue50;
+  const border = accent === 'green' ? Colors.green100 ?? '#BBF7D0' : accent === 'orange' ? '#FED7AA' : Colors.blue100;
+  const titleColor = accent === 'green' ? Colors.green700 ?? '#15803D' : accent === 'orange' ? '#C2410C' : Colors.blue900;
+
+  return (
+    <View style={[styles.infoCard, { backgroundColor: bg, borderColor: border }]}>
+      <Text style={[styles.infoCardTitle, { color: titleColor }]}>{title}</Text>
+      {filtered.map((row, i) => (
+        <View
+          key={i}
+          style={[styles.infoRow, i === filtered.length - 1 && { borderBottomWidth: 0 }]}
+        >
+          <Text style={styles.infoKey}>{row.k}</Text>
+          <Text style={[styles.infoVal, row.highlight && { color: Colors.green500, fontWeight: '700' }]}>
+            {val(row.v)}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// ── Spec tile (2-column grid) ────────────────────────────────────────────────
+function SpecTile({ label, value, icon }) {
+  if (!val(value)) return null;
+  return (
+    <View style={styles.specItem}>
+      <View style={styles.specIcon}>{icon}</View>
+      <Text style={styles.specLabel}>{label}</Text>
+      <Text style={styles.specValue}>{val(value)}</Text>
+    </View>
+  );
+}
+
+// ── Status badge ─────────────────────────────────────────────────────────────
+function StatusBadge({ status }) {
+  const isActive = String(status).toLowerCase() === 'active';
+  return (
+    <View style={[styles.statusBadge, { backgroundColor: isActive ? '#DCFCE7' : '#FEE2E2' }]}>
+      <Text style={[styles.statusText, { color: isActive ? '#16A34A' : '#DC2626' }]}>
+        {isActive ? '● Active' : `● ${status || 'Unknown'}`}
+      </Text>
+    </View>
+  );
+}
+
 export default function CarDetailsScreen({ route, navigation }) {
   const { carData, rcNumber, from } = route.params || {};
+  console.log("CarDetailsScreen received carData:", carData);
 
-  // Agar carData nahi mila to fallback
   if (!carData) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={{ textAlign: 'center', marginTop: 100 }}>No car data found</Text>
+        <View style={styles.emptyState}>
+          <Svg width={64} height={64} viewBox="0 0 24 24" fill="none">
+            <Circle cx="12" cy="12" r="10" stroke={Colors.neutral300} strokeWidth={1.5} />
+            <Path d="M12 8v4M12 16h.01" stroke={Colors.neutral300} strokeWidth={1.5} strokeLinecap="round" />
+          </Svg>
+          <Text style={styles.emptyTitle}>No Car Data Found</Text>
+          <Text style={styles.emptySubtitle}>RC data could not be loaded. Please try again.</Text>
+          <TouchableOpacity style={styles.btnPrimary} onPress={() => navigation.goBack()}>
+            <Text style={styles.btnPrimaryText}>← Go Back</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
 
-  const fullCarName = `${carData.make} ${carData.model}`;
+  const fullCarName = [carData.make, carData.model].filter(Boolean).join(' ') || 'Unknown Vehicle';
+  const displayRC = rcNumber || carData.rcNumber || '—';
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <PageHeader title="Car Details" onBack={() => navigation.goBack()} />
+      <PageHeader title="Vehicle Details" onBack={() => navigation.goBack()} />
       <ProgressBar steps={3} currentStep={2} />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* Car Hero Section */}
-        <LinearGradient colors={[Colors.blue50, Colors.green50]} style={styles.carHero}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+
+        {/* ── Hero ── */}
+        <LinearGradient colors={[Colors.blue50, Colors.green50 ?? '#F0FDF4']} style={styles.carHero}>
           <CarSVG />
           <Text style={styles.carName}>{fullCarName}</Text>
           <Text style={styles.carSub}>
-            {carData.variant || carData.bodyType} • {rcNumber || carData.rcNumber}
+            {val(carData.variant) || val(carData.bodyType) || 'Vehicle'} • {displayRC}
           </Text>
-          <View style={styles.verifiedBadge}>
-            <Text style={styles.verifiedText}>✓ Data Verified from RC</Text>
+          <View style={styles.heroRow}>
+            <View style={styles.verifiedBadge}>
+              <Text style={styles.verifiedText}>✓ Verified from RC</Text>
+            </View>
+            {carData.rcStatus ? <StatusBadge status={carData.rcStatus} /> : null}
           </View>
         </LinearGradient>
 
         <View style={styles.pad}>
-          {/* Dynamic Specs Grid */}
+
+          {/* ── Quick Specs Grid ── */}
+          <Text style={styles.sectionHeading}>Specifications</Text>
           <View style={styles.specGrid}>
-            <View style={styles.specItem}>
-              <View style={styles.specIcon}>
-                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                  <Rect x="3" y="4" width="18" height="18" rx="2" stroke={Colors.blue500} strokeWidth={1.6} />
-                  <Line x1="16" y1="2" x2="16" y2="6" stroke={Colors.blue500} strokeWidth={1.6} strokeLinecap="round" />
-                  <Line x1="8" y1="2" x2="8" y2="6" stroke={Colors.blue500} strokeWidth={1.6} strokeLinecap="round" />
-                  <Line x1="3" y1="10" x2="21" y2="10" stroke={Colors.blue500} strokeWidth={1.6} strokeLinecap="round" />
-                </Svg>
-              </View>
-              <Text style={styles.specLabel}>Manufacturing Year</Text>
-              <Text style={styles.specValue}>{carData.manufacturingYear}</Text>
-            </View>
+            <SpecTile label="Mfg. Year" value={carData.manufacturingYear}
+              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <Rect x="3" y="4" width="18" height="18" rx="2" stroke={Colors.blue500} strokeWidth={1.6} />
+                <Line x1="3" y1="10" x2="21" y2="10" stroke={Colors.blue500} strokeWidth={1.6} strokeLinecap="round" />
+              </Svg>} />
 
-            <View style={styles.specItem}>
-              <View style={styles.specIcon}>
-                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                  <Circle cx="12" cy="12" r="10" stroke={Colors.blue500} strokeWidth={1.6} />
-                </Svg>
-              </View>
-              <Text style={styles.specLabel}>Fuel Type</Text>
-              <Text style={styles.specValue}>{carData.fuelType}</Text>
-            </View>
+            <SpecTile label="Fuel Type" value={carData.fuelType}
+              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <Path d="M3 22V8l7-6 7 6v14" stroke={Colors.blue500} strokeWidth={1.6} strokeLinecap="round" />
+              </Svg>} />
 
-            <View style={styles.specItem}>
-              <View style={styles.specIcon}>
-                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                  <Rect x="3" y="3" width="18" height="18" rx="2" stroke={Colors.blue500} strokeWidth={1.6} />
-                </Svg>
-              </View>
-              <Text style={styles.specLabel}>Vehicle Class</Text>
-              <Text style={styles.specValue}>{carData.vehicleClass}</Text>
-            </View>
+            <SpecTile label="Body Type" value={carData.bodyType}
+              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <Rect x="3" y="3" width="18" height="18" rx="2" stroke={Colors.blue500} strokeWidth={1.6} />
+              </Svg>} />
 
-            <View style={styles.specItem}>
-              <View style={styles.specIcon}>
-                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                  <Path d="M12 2v20M2 12h20" stroke={Colors.blue500} strokeWidth={1.6} strokeLinecap="round" />
-                </Svg>
-              </View>
-              <Text style={styles.specLabel}>Body Type</Text>
-              <Text style={styles.specValue}>{carData.bodyType}</Text>
-            </View>
+            <SpecTile label="Vehicle Class" value={carData.vehicleClass}
+              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <Circle cx="12" cy="12" r="10" stroke={Colors.blue500} strokeWidth={1.6} />
+              </Svg>} />
 
-            <View style={styles.specItem}>
-              <View style={styles.specIcon}>
-                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                  <Circle cx="12" cy="12" r="10" stroke={Colors.blue500} strokeWidth={1.6} />
-                  <Path d="M12 8v8" stroke={Colors.blue500} strokeWidth={1.6} />
-                </Svg>
-              </View>
-              <Text style={styles.specLabel}>Color</Text>
-              <Text style={styles.specValue}>{carData.color}</Text>
-            </View>
+            <SpecTile label="Color" value={carData.color}
+              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <Circle cx="12" cy="12" r="10" stroke={Colors.blue500} strokeWidth={1.6} />
+                <Path d="M12 8v8" stroke={Colors.blue500} strokeWidth={1.6} strokeLinecap="round" />
+              </Svg>} />
 
-            <View style={styles.specItem}>
-              <View style={styles.specIcon}>
-                <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
-                  <Rect x="6" y="6" width="12" height="12" rx="2" stroke={Colors.blue500} strokeWidth={1.6} />
-                </Svg>
-              </View>
-              <Text style={styles.specLabel}>Seating Capacity</Text>
-              <Text style={styles.specValue}>{carData.seatingCapacity}</Text>
-            </View>
+            <SpecTile label="Seating" value={carData.seatingCapacity}
+              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <Rect x="6" y="6" width="12" height="12" rx="2" stroke={Colors.blue500} strokeWidth={1.6} />
+              </Svg>} />
+
+            <SpecTile label="Category" value={carData.vehicleCategory}
+              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <Path d="M4 6h16M4 12h16M4 18h16" stroke={Colors.blue500} strokeWidth={1.6} strokeLinecap="round" />
+              </Svg>} />
+
+            <SpecTile label="Norms" value={carData.variant}
+              icon={<Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+                <Path d="M12 2l3 7h7l-6 4 2 7-6-4-6 4 2-7-6-4h7z" stroke={Colors.blue500} strokeWidth={1.4} strokeLinejoin="round" />
+              </Svg>} />
           </View>
 
-          {/* Registration Details Card */}
-          <View style={styles.rtoCard}>
-            <Text style={styles.rtoTitle}>Registration Details</Text>
+          {/* ── Registration Details ── */}
+          <InfoCard
+            title="📋 Registration Details"
+            accent="blue"
+            rows={[
+              { k: 'RC Number', v: displayRC },
+              { k: 'Owner Name', v: carData.ownerName },
+              { k: "Father's Name", v: carData.fatherName },
+              { k: 'RTO Office', v: carData.rtoOffice },
+              { k: 'RTO Code', v: carData.rtoCode },
+              { k: 'Registration Date', v: carData.registrationDate },
+              { k: 'Valid Till', v: carData.registrationValidity, highlight: true },
+              { k: 'RC Status', v: carData.rcStatus },
+              { k: 'Status As On', v: carData.statusAsOn },
+              { k: 'Owner Count', v: carData.ownerCount },
+              { k: 'Tax Valid Till', v: carData.taxValidity, highlight: true },
+            ]}
+          />
 
-            <View style={styles.rtoRow}>
-              <Text style={styles.rtoKey}>Owner Name</Text>
-              <Text style={styles.rtoVal}>{carData.ownerName}</Text>
+          {/* ── Insurance Details ── */}
+          <InfoCard
+            title="🛡️ Insurance Details"
+            accent="green"
+            rows={[
+              { k: 'Company', v: carData.insuranceCompany },
+              { k: 'Policy Number', v: carData.insurancePolicyNumber },
+              { k: 'Valid Till', v: carData.insuranceValidity, highlight: true },
+            ]}
+          />
+
+          {/* ── PUCC Details ── */}
+          <InfoCard
+            title="🌿 PUC Certificate"
+            accent="green"
+            rows={[
+              { k: 'PUCC Number', v: carData.puccNumber },
+              { k: 'Valid Till', v: carData.puccValidity, highlight: true },
+            ]}
+          />
+
+          {/* ── Technical Details ── */}
+          <InfoCard
+            title="⚙️ Technical Details"
+            accent="blue"
+            rows={[
+              { k: 'Chassis Number', v: carData.chassisNumber },
+              { k: 'Engine Number', v: carData.engineNumber },
+              { k: 'Cubic Capacity', v: carData.cubicCapacity },
+              { k: 'Cylinders', v: carData.cylinderCount },
+              { k: 'Wheelbase', v: carData.wheelbase },
+              { k: 'Gross Weight', v: carData.grossWeight },
+              { k: 'Unladen Weight', v: carData.unladenWeight },
+            ]}
+          />
+
+          {/* ── Finance Details ── */}
+          <InfoCard
+            title="💳 Finance Details"
+            accent="orange"
+            rows={[
+              { k: 'Financed', v: carData.financed },
+              { k: 'Financer', v: carData.financer },
+              { k: 'Commercial Vehicle', v: carData.isCommercial },
+            ]}
+          />
+
+          {/* ── Address ── */}
+          <InfoCard
+            title="📍 Address"
+            accent="blue"
+            rows={[
+              { k: 'Present Address', v: carData.presentAddress },
+              { k: 'Permanent Address', v: carData.permanentAddress },
+            ]}
+          />
+
+          {/* ── Blacklist / Challan ── */}
+          {(carData.blacklistStatus || (carData.blacklistDetails && carData.blacklistDetails.length > 0)) && (
+            <InfoCard
+              title="🚫 Blacklist Info"
+              accent="orange"
+              rows={[
+                { k: 'Blacklist Status', v: carData.blacklistStatus || 'None' },
+                { k: 'Blacklist Records', v: carData.blacklistDetails?.length > 0 ? `${carData.blacklistDetails.length} record(s)` : 'None' },
+              ]}
+            />
+          )}
+
+          {carData.challanDetails && carData.challanDetails.length > 0 && (
+            <View style={[styles.infoCard, { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }]}>
+              <Text style={[styles.infoCardTitle, { color: '#C2410C' }]}>⚠️ Challan Details</Text>
+              {carData.challanDetails.map((c, i) => (
+                <Text key={i} style={styles.infoKey}>{JSON.stringify(c)}</Text>
+              ))}
             </View>
+          )}
 
-            <View style={styles.rtoRow}>
-              <Text style={styles.rtoKey}>Father Name</Text>
-              <Text style={styles.rtoVal}>{carData.fatherName}</Text>
-            </View>
-
-            <View style={styles.rtoRow}>
-              <Text style={styles.rtoKey}>RTO Office</Text>
-              <Text style={styles.rtoVal}>{carData.rtoOffice}</Text>
-            </View>
-
-            <View style={styles.rtoRow}>
-              <Text style={styles.rtoKey}>Registration Date</Text>
-              <Text style={styles.rtoVal}>{carData.registrationDate}</Text>
-            </View>
-
-            <View style={[styles.rtoRow, { borderBottomWidth: 0 }]}>
-              <Text style={styles.rtoKey}>Registration Valid Till</Text>
-              <Text style={[styles.rtoVal, { color: Colors.green500 }]}>
-                {carData.registrationValidity}
-              </Text>
-            </View>
-          </View>
-
-          {from === 'verifyRC' ? (
-            null
-          ) : (
+          {/* ── CTA ── */}
+          {from !== 'verifyRC' && (
             <TouchableOpacity
               style={styles.btnPrimary}
               onPress={() => navigation.navigate('ConditionForm', { carData, rcNumber })}
@@ -208,9 +325,6 @@ export default function CarDetailsScreen({ route, navigation }) {
               <Text style={styles.btnPrimaryText}>Continue →</Text>
             </TouchableOpacity>
           )}
-
-          {/* Continue Button */}
-
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -219,101 +333,78 @@ export default function CarDetailsScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.white },
+
+  // Header
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral100,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 20, paddingTop: 18, paddingBottom: 12,
+    borderBottomWidth: 1, borderBottomColor: Colors.neutral100,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.neutral50,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: Colors.neutral50, alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: { fontSize: 17, fontWeight: '700', color: Colors.neutral900 },
+
+  // Progress
   progressWrap: { paddingHorizontal: 20, paddingVertical: 12 },
   progressSteps: { flexDirection: 'row', gap: 6 },
   pStep: { flex: 1, height: 4, borderRadius: 4, backgroundColor: Colors.neutral200 },
   pStepDone: { backgroundColor: Colors.blue500 },
   pStepActive: { backgroundColor: Colors.blue300 },
 
-  carHero: {
-    padding: 28,
-    alignItems: 'center',
-    gap: 12,
-  },
+  // Hero
+  carHero: { padding: 28, alignItems: 'center', gap: 10 },
   carName: { fontSize: 20, fontWeight: '800', color: Colors.neutral900, textAlign: 'center' },
   carSub: { fontSize: 13, color: Colors.neutral500, textAlign: 'center' },
+  heroRow: { flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' },
   verifiedBadge: {
-    backgroundColor: Colors.blue100,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
+    backgroundColor: Colors.blue100, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20,
   },
   verifiedText: { fontSize: 11, fontWeight: '600', color: Colors.blue900 },
+  statusBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
+  statusText: { fontSize: 11, fontWeight: '600' },
 
+  // Layout
   pad: { padding: 20, gap: 16 },
-  specGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
+  sectionHeading: { fontSize: 13, fontWeight: '700', color: Colors.neutral500, letterSpacing: 0.5, textTransform: 'uppercase' },
+
+  // Spec grid
+  specGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   specItem: {
-    width: '48%',
-    backgroundColor: Colors.neutral50,
-    borderRadius: 14,
-    padding: 14,
-    gap: 6,
+    width: '48%', backgroundColor: Colors.neutral50,
+    borderRadius: 14, padding: 14, gap: 6,
   },
   specIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: Colors.blue50,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 28, height: 28, borderRadius: 8,
+    backgroundColor: Colors.blue50, alignItems: 'center', justifyContent: 'center',
   },
   specLabel: { fontSize: 12, color: Colors.neutral500, fontWeight: '500' },
   specValue: { fontSize: 15, fontWeight: '700', color: Colors.neutral900 },
 
-  rtoCard: {
-    backgroundColor: Colors.blue50,
-    borderWidth: 1,
-    borderColor: Colors.blue100,
-    borderRadius: 16,
-    padding: 16,
-    marginTop: 8,
+  // Info card
+  infoCard: {
+    borderWidth: 1, borderRadius: 16, padding: 16,
   },
-  rtoTitle: { fontSize: 14, fontWeight: '600', color: Colors.blue900, marginBottom: 12 },
-  rtoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral100,
+  infoCardTitle: { fontSize: 14, fontWeight: '700', marginBottom: 12 },
+  infoRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.neutral100, gap: 8,
   },
-  rtoKey: { fontSize: 13, color: Colors.neutral500 },
-  rtoVal: { fontSize: 13, fontWeight: '600', color: Colors.neutral900 },
+  infoKey: { fontSize: 13, color: Colors.neutral500, flex: 1 },
+  infoVal: { fontSize: 13, fontWeight: '600', color: Colors.neutral900, flex: 1, textAlign: 'right' },
 
+  // Empty state
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, gap: 16 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.neutral900 },
+  emptySubtitle: { fontSize: 14, color: Colors.neutral500, textAlign: 'center' },
+
+  // Button
   btnPrimary: {
-    backgroundColor: Colors.blue500,
-    borderRadius: 14,
-    padding: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-    shadowColor: Colors.blue500,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 5,
+    backgroundColor: Colors.blue500, borderRadius: 14, padding: 15,
+    alignItems: 'center', justifyContent: 'center', marginTop: 10,
+    shadowColor: Colors.blue500, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35, shadowRadius: 10, elevation: 5,
   },
   btnPrimaryText: { color: Colors.white, fontSize: 16, fontWeight: '600' },
 });

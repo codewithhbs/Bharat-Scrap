@@ -84,7 +84,7 @@ const EMPTY_FORM = {
 };
 
 export default function HomeSearch() {
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://www.api.bharatscrapfacilities.com/api";
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://www.api.bharatscrapfacilities.com/api";
     const [loading, setLoading] = useState(false);
     const [popupStatus, setPopupStatus] = useState(null); // 'success' | 'error' | null
     const [formData, setFormData] = useState(EMPTY_FORM);

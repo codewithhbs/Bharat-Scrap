@@ -1,9 +1,10 @@
 // admin src/utils/api.js
 import axios from "axios";
 import toast from "react-hot-toast";
+import useAuthStore from "../store/useAuthStore";
 
 const API_BASE =
-  import.meta.env.VITE_API_URL || "http://www.api.bharatscrapfacilities.com/api";
+  import.meta.env.VITE_API_URL || "https://www.api.bharatscrapfacilities.com/api";
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -96,9 +97,13 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
         return api(originalRequest);
+        // Sirf yeh block replace karo catch ke andar:
       } catch (refreshError) {
         console.warn("Session expired. Logging out...");
         clearTokens();
+
+        // Zustand store bhi clear karo
+        useAuthStore.getState().logout();
 
         window.location.href = "/login";
         return Promise.reject(refreshError);

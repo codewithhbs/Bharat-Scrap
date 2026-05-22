@@ -21,7 +21,7 @@ import polyline from '@mapbox/polyline';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const POLL_INTERVAL = 10000;
-const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAP_API;
+const GOOGLE_MAPS_API_KEY = "AIzaSyD022IF_7EVi9DEqKBizpz6vXM_nuFeE1g";
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 
@@ -303,13 +303,13 @@ function LiveTrackingMap({ carId, craneManLocation, pickupLocation, onMapTouchSt
                         setLastUpdated(new Date(loc.timestamp || Date.now()));
 
                         if (pickupLocation?.latitude) {
-    const dist = getDistanceKm(
-        newLoc.latitude, newLoc.longitude,
-        pickupLocation.latitude, pickupLocation.longitude
-    );
-    setDistance(dist);
-}
-// Map fitting ab route polyline ke through hoga, yahan se hata diya
+                            const dist = getDistanceKm(
+                                newLoc.latitude, newLoc.longitude,
+                                pickupLocation.latitude, pickupLocation.longitude
+                            );
+                            setDistance(dist);
+                        }
+                        // Map fitting ab route polyline ke through hoga, yahan se hata diya
                     }
                 }
             } catch (err) {
@@ -323,8 +323,8 @@ function LiveTrackingMap({ carId, craneManLocation, pickupLocation, onMapTouchSt
     }, [carId, pickupLocation, mapReady]);
 
     useEffect(() => {
-    if (!craneLocation?.latitude || !pickupLocation?.latitude) return;
-    
+        if (!craneLocation?.latitude || !pickupLocation?.latitude) return;
+
         // ── OPTIMIZATION: agar crane 100m se kam hila to refetch skip karo ──
         const lastOrigin = lastRouteOriginRef.current;
         if (lastOrigin) {
@@ -420,15 +420,15 @@ function LiveTrackingMap({ carId, craneManLocation, pickupLocation, onMapTouchSt
                 style={{ height: 280 }}
             >
                 <MapView
-    ref={mapRef}
-    style={styles.map}
-    initialRegion={initialRegion}
-    showsMyLocationButton={false}
-    showsTraffic={false}
-    showsCompass={false}
-    showsScale={false}
-    onMapReady={() => setMapReady(true)}
->
+                    ref={mapRef}
+                    style={styles.map}
+                    initialRegion={initialRegion}
+                    showsMyLocationButton={false}
+                    showsTraffic={false}
+                    showsCompass={false}
+                    showsScale={false}
+                    onMapReady={() => setMapReady(true)}
+                >
                     {/* ── CraneMan Marker ── */}
                     <Marker
                         coordinate={craneLocation}
@@ -450,33 +450,33 @@ function LiveTrackingMap({ carId, craneManLocation, pickupLocation, onMapTouchSt
 
                     {/* ── Polyline: craneMan → user ── */}
                     {/* ── Pickup Location Marker ── */}
-{pickupLocation?.latitude && (
-    <Marker
-        coordinate={pickupLocation}
-        title="Pickup Location"
-        description="Your location"
-        anchor={{ x: 0.5, y: 1 }}
-        tracksViewChanges={false}
-    >
-        <View style={styles.pickupMarkerWrap}>
-            <View style={styles.pickupMarkerPin}>
-                <View style={styles.pickupMarkerDot} />
-            </View>
-            <View style={styles.pickupMarkerTail} />
-        </View>
-    </Marker>
-)}
+                    {pickupLocation?.latitude && (
+                        <Marker
+                            coordinate={pickupLocation}
+                            title="Pickup Location"
+                            description="Your location"
+                            anchor={{ x: 0.5, y: 1 }}
+                            tracksViewChanges={false}
+                        >
+                            <View style={styles.pickupMarkerWrap}>
+                                <View style={styles.pickupMarkerPin}>
+                                    <View style={styles.pickupMarkerDot} />
+                                </View>
+                                <View style={styles.pickupMarkerTail} />
+                            </View>
+                        </Marker>
+                    )}
 
-{/* ── Polyline: craneMan → pickup (road route) ── */}
-{routeCoords.length > 0 && (
-    <Polyline
-        coordinates={routeCoords}
-        strokeColor="#2563EB"
-        strokeWidth={4}
-        lineCap="round"
-        lineJoin="round"
-    />
-)}
+                    {/* ── Polyline: craneMan → pickup (road route) ── */}
+                    {routeCoords.length > 0 && (
+                        <Polyline
+                            coordinates={routeCoords}
+                            strokeColor="#2563EB"
+                            strokeWidth={4}
+                            lineCap="round"
+                            lineJoin="round"
+                        />
+                    )}
                 </MapView>
             </View>
 
@@ -494,11 +494,11 @@ function LiveTrackingMap({ carId, craneManLocation, pickupLocation, onMapTouchSt
                     <View style={[styles.bottomDot, { backgroundColor: '#22c55e' }]} />
                     <View>
                         <Text style={styles.bottomItemLabel}>Pickup Point</Text>
-<Text style={styles.bottomItemSub}>
-    {lastUpdated
-        ? `Updated ${lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`
-        : 'Awaiting crane'}
-</Text>
+                        <Text style={styles.bottomItemSub}>
+                            {lastUpdated
+                                ? `Updated ${lastUpdated.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`
+                                : 'Awaiting crane'}
+                        </Text>
                     </View>
                 </View>
             </View>
@@ -520,7 +520,7 @@ export default function SoldCarDetailScreen({ route, navigation }) {
         try {
             const response = await api.get(`/api/car/get-car-detail-by-id/${carId}`);
             if (response.data.success) {
-                console.log("response.data.data",response.data.data)
+                console.log("response.data.data", response.data.data)
                 setCarDetail(response.data.data);
                 setIsUser(response.data.isUser);
                 Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
@@ -564,16 +564,16 @@ export default function SoldCarDetailScreen({ route, navigation }) {
     } = carDetail;
 
     const craneManCoords = craneMan?.location?.latitude ? {
-    latitude: parseFloat(craneMan.location.latitude),
-    longitude: parseFloat(craneMan.location.longitude),
-} : null;
+        latitude: parseFloat(craneMan.location.latitude),
+        longitude: parseFloat(craneMan.location.longitude),
+    } : null;
 
-const pickupCoords = pickupLocation?.latitude ? {
-    latitude: parseFloat(pickupLocation.latitude),
-    longitude: parseFloat(pickupLocation.longitude),
-} : null;
+    const pickupCoords = pickupLocation?.latitude ? {
+        latitude: parseFloat(pickupLocation.latitude),
+        longitude: parseFloat(pickupLocation.longitude),
+    } : null;
 
-const showMap = isUser && (status === 'en_route' || status === 'en_route_to_garage') && craneManCoords && pickupCoords;
+    const showMap = isUser && (status === 'en_route' || status === 'en_route_to_garage') && craneManCoords && pickupCoords;
 
     return (
         <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -588,7 +588,7 @@ const showMap = isUser && (status === 'en_route' || status === 'en_route_to_gara
                 {/* ── Hero Card ── */}
                 <LinearGradient colors={['#1E3A8A', '#2563EB']} style={styles.heroCard}>
                     <View style={styles.heroTop}>
-                        <View>
+                        <View style={styles.heroTitleWrap}>
                             <Text style={styles.heroMake}>{rc?.make || '—'} {rc?.model || ''}</Text>
                             <Text style={styles.heroYear}>{rc?.manufacturingYear || ''}</Text>
                         </View>
@@ -628,12 +628,12 @@ const showMap = isUser && (status === 'en_route' || status === 'en_route_to_gara
                             </View>
                         </View>
                         <LiveTrackingMap
-    carId={carId}
-    craneManLocation={craneManCoords}
-    pickupLocation={pickupCoords}
-    onMapTouchStart={() => setScrollEnabled(false)}
-    onMapTouchEnd={() => setScrollEnabled(true)}
-/>
+                            carId={carId}
+                            craneManLocation={craneManCoords}
+                            pickupLocation={pickupCoords}
+                            onMapTouchStart={() => setScrollEnabled(false)}
+                            onMapTouchEnd={() => setScrollEnabled(true)}
+                        />
                     </View>
                 )}
 
@@ -650,7 +650,7 @@ const showMap = isUser && (status === 'en_route' || status === 'en_route_to_gara
                     <Section title="Vehicle Information" icon={<CarIcon color="#2563EB" />}>
                         <InfoRow label="Make" value={rc.make} />
                         <InfoRow label="Model" value={rc.model} />
-                        <InfoRow label="Year" value={rc.manufacturingYear} />
+                        <InfoRow label="Manufacturing Year" value={rc.manufacturingYear} />
                         <InfoRow label="Color" value={rc.color} />
                         <InfoRow label="Body Type" value={rc.bodyType} />
                         <InfoRow label="Vehicle Class" value={rc.vehicleClass} />
@@ -658,8 +658,13 @@ const showMap = isUser && (status === 'en_route' || status === 'en_route_to_gara
                         <InfoRow label="Seating Capacity" value={rc.seatingCapacity} />
                         <InfoRow label="Engine Number" value={rc.engineNumber} />
                         <InfoRow label="Chassis Number" value={rc.chassisNumber} />
-                        <InfoRow label="Unladen Weight" value={rc.unladenWeight ? `${rc.unladenWeight} kg` : undefined} />
-                        <InfoRow label="Gross Weight" value={rc.grossVehicleWeight ? `${rc.grossVehicleWeight} kg` : undefined} />
+                        <InfoRow label="Cubic Capacity" value={rc.cubicCapacity} />
+                        <InfoRow label="Cylinders" value={rc.cylinderCount} />
+                        <InfoRow label="Wheelbase" value={rc.wheelbase} />
+                        <InfoRow label="Unladen Weight" value={rc.unladenWeight} />
+                        <InfoRow label="Gross Weight" value={rc.grossWeight} />
+                        <InfoRow label="Vehicle Category" value={rc.vehicleCategory} />
+                        <InfoRow label="Variant / Norms" value={rc.variant} />
                     </Section>
                 )}
 
@@ -669,14 +674,37 @@ const showMap = isUser && (status === 'en_route' || status === 'en_route_to_gara
                         <InfoRow label="RC Number" value={rcNumber} />
                         <InfoRow label="Owner Name" value={rc.ownerName} />
                         <InfoRow label="Father's Name" value={rc.fatherName} />
-                        <InfoRow label="Address" value={rc.address} />
-                        <InfoRow label="Registration Date" value={rc.registrationDate} />
-                        <InfoRow label="Validity" value={rc.registrationValidity} />
-                        <InfoRow label="Insurance Valid Till" value={rc.insuranceValidity} />
-                        <InfoRow label="Pollution Valid Till" value={rc.pollutionValidity} />
                         <InfoRow label="RTO Office" value={rc.rtoOffice} />
-                        <InfoRow label="Vehicle Category" value={rc.vehicleCategory} />
-                        <InfoRow label="Status" value={rc.status} />
+                        <InfoRow label="RTO Code" value={rc.rtoCode} />
+                        <InfoRow label="Registration Date" value={rc.registrationDate} />
+                        <InfoRow label="Valid Till" value={rc.registrationValidity} />
+                        <InfoRow label="RC Status" value={rc.rcStatus} />
+                        <InfoRow label="Status As On" value={rc.statusAsOn} />
+                        <InfoRow label="Tax Valid Till" value={rc.taxValidity} />
+                        <InfoRow label="Owner Count" value={rc.ownerCount} />
+                        <InfoRow label="Present Address" value={rc.presentAddress} />
+                        <InfoRow label="Permanent Address" value={rc.permanentAddress} />
+                    </Section>
+                )}
+
+                {/* ── Insurance & PUC ── */}
+                {rc && (
+                    <Section title="Insurance & PUC" icon={<CheckIcon color="#2563EB" />}>
+                        <InfoRow label="Insurance Company" value={rc.insuranceCompany} />
+                        <InfoRow label="Policy Number" value={rc.insurancePolicyNumber} />
+                        <InfoRow label="Insurance Valid Till" value={rc.insuranceValidity} />
+                        <InfoRow label="PUCC Number" value={rc.puccNumber} />
+                        <InfoRow label="PUC Valid Till" value={rc.puccValidity} />
+                    </Section>
+                )}
+
+                {/* ── Finance & Other ── */}
+                {rc && (
+                    <Section title="Finance & Other" icon={<PaymentIcon color="#2563EB" />}>
+                        <BoolRow label="Financed" value={rc.financed} />
+                        <InfoRow label="Financer" value={rc.financer} />
+                        <BoolRow label="Commercial Vehicle" value={rc.isCommercial} />
+                        <InfoRow label="Blacklist Status" value={rc.blacklistStatus} />
                     </Section>
                 )}
 
@@ -798,15 +826,42 @@ const styles = StyleSheet.create({
 
     // Hero
     heroCard: { margin: 16, borderRadius: 16, padding: 20, shadowColor: '#1E3A8A', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 6 },
-    heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 },
-    heroMake: { fontSize: 22, fontWeight: '800', color: '#fff', letterSpacing: -0.5 },
+    heroTop: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 18,
+        gap: 8,
+    },
+    heroTitleWrap: {
+        flex: 1,
+        marginRight: 8,
+    },
+    heroMake: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: '#fff',
+        letterSpacing: -0.5,
+        flexWrap: 'wrap',
+    },
     heroYear: { fontSize: 14, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
     heroStats: { flexDirection: 'row', gap: 20 },
     heroStat: { gap: 2 },
     heroStatVal: { fontSize: 15, fontWeight: '700', color: '#fff' },
     heroStatLabel: { fontSize: 11, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: 0.5 },
-    statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
-    statusText: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+    statusBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 20,
+        alignSelf: 'flex-start',
+        flexShrink: 0,
+    },
+    statusText: {
+        fontSize: 11,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
 
     // Tracking Section
     trackingSection: { marginHorizontal: 16, marginBottom: 12 },
@@ -841,24 +896,24 @@ const styles = StyleSheet.create({
     craneMarkerInner: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', shadowColor: '#2563EB', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 8, position: 'absolute' },
     pulseRing: { position: 'absolute', width: 42, height: 42, borderRadius: 21, backgroundColor: '#2563EB' },
     pickupMarkerWrap: { alignItems: 'center' },
-pickupMarkerPin: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#22c55e',
-    borderWidth: 3, borderColor: '#fff',
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#22c55e', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
-},
-pickupMarkerDot: {
-    width: 10, height: 10, borderRadius: 5, backgroundColor: '#fff',
-},
-pickupMarkerTail: {
-    width: 0, height: 0,
-    borderLeftWidth: 6, borderRightWidth: 6, borderTopWidth: 8,
-    borderLeftColor: 'transparent', borderRightColor: 'transparent',
-    borderTopColor: '#22c55e',
-    marginTop: -2,
-},
+    pickupMarkerPin: {
+        width: 36, height: 36, borderRadius: 18,
+        backgroundColor: '#22c55e',
+        borderWidth: 3, borderColor: '#fff',
+        alignItems: 'center', justifyContent: 'center',
+        shadowColor: '#22c55e', shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
+    },
+    pickupMarkerDot: {
+        width: 10, height: 10, borderRadius: 5, backgroundColor: '#fff',
+    },
+    pickupMarkerTail: {
+        width: 0, height: 0,
+        borderLeftWidth: 6, borderRightWidth: 6, borderTopWidth: 8,
+        borderLeftColor: 'transparent', borderRightColor: 'transparent',
+        borderTopColor: '#22c55e',
+        marginTop: -2,
+    },
 
     // Bottom Bar
     trackingBottomBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#F1F5F9' },

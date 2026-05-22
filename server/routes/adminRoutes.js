@@ -45,7 +45,7 @@ router.put("/users/:id/block-unblock", authenticateAccessToken, authorizeRoles("
 router.put("/users/:id", authenticateAccessToken, authorizeRoles("admin"), adminController.updateUserById);
 router.get("/users/:id", authenticateAccessToken, authorizeRoles("admin"), adminController.getUserById);
 
-router.get("/dashboard-data", authenticateAccessToken, authorizeRoles("admin"), adminController.getDashboardData);
+router.get("/dashboard-data", adminController.getDashboardData);
 
 router.get("/cars", adminController.getAllCars);
 router.put("/cars/:id/status", authenticateAccessToken, authorizeRoles("admin"), adminController.changeStatusCarById);

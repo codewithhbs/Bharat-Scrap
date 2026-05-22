@@ -239,7 +239,7 @@ export default function RcDetails() {
 
   // ── Delete ──────────────────────────────────────────────────────
   const confirmDelete = () => {
-    const car = rc?.carDetail || {};
+    const car = rc?.carDetail?.carData || {};
     Swal.fire({
       title: "Delete this RC record?",
       text: `${car.rcNumber} (${car.ownerName}) will be permanently deleted.`,
@@ -328,7 +328,7 @@ export default function RcDetails() {
       </div>
     );
 
-  const car = rc.carDetail || {};
+  const car = rc.carDetail?.carData || {};
   const statusColor = STATUS_COLORS[car.status] || STATUS_COLORS.Active;
 
   return (
@@ -413,12 +413,24 @@ export default function RcDetails() {
           >
             <RefreshCw size={14} /> Refresh
           </button>
-          {/* <button
+          <button
             onClick={confirmDelete}
-            style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 16px", borderRadius: 10, border: "1.5px solid #fecaca", background: "#fff1f2", color: "#be123c", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              padding: "9px 16px",
+              borderRadius: 10,
+              border: "1.5px solid #fecaca",
+              background: "#fff1f2",
+              color: "#be123c",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
           >
             <Trash2 size={14} /> Delete
-          </button> */}
+          </button>
         </div>
       </div>
 
@@ -508,7 +520,13 @@ export default function RcDetails() {
             <Grid>
               <Field label="Owner Name" value={car.ownerName} />
               <Field label="Father's Name" value={car.fatherName} />
-              <Field label="Address" value={car.address} full />
+              <Field label="Owner Count" value={car.ownerCount} />
+              <Field label="Present Address" value={car.presentAddress} full />
+              <Field
+                label="Permanent Address"
+                value={car.permanentAddress}
+                full
+              />
             </Grid>
           </Section>
 
@@ -523,18 +541,13 @@ export default function RcDetails() {
               <Field label="Body Type" value={car.bodyType} />
               <Field label="Vehicle Class" value={car.vehicleClass} />
               <Field label="Vehicle Category" value={car.vehicleCategory} />
+              <Field label="Variant / Norms" value={car.variant} />
               <Field label="Seating Capacity" value={car.seatingCapacity} />
-              <Field label="Standing Capacity" value={car.standingCapacity} />
-              <Field
-                label="Unladen Weight"
-                value={car.unladenWeight ? `${car.unladenWeight} kg` : null}
-              />
-              <Field
-                label="Gross Vehicle Weight"
-                value={
-                  car.grossVehicleWeight ? `${car.grossVehicleWeight} kg` : null
-                }
-              />
+              <Field label="Cubic Capacity" value={car.cubicCapacity} />
+              <Field label="Cylinders" value={car.cylinderCount} />
+              <Field label="Wheelbase" value={car.wheelbase} />
+              <Field label="Unladen Weight" value={car.unladenWeight} />
+              <Field label="Gross Weight" value={car.grossWeight} />
             </Grid>
           </Section>
 
@@ -548,6 +561,8 @@ export default function RcDetails() {
                 full
               />
               <Field label="Engine Number" value={car.engineNumber} mono />
+              <Field label="RC Number" value={car.rcNumber} mono />
+              <Field label="RTO Code" value={car.rtoCode} />
             </Grid>
           </Section>
 
@@ -556,33 +571,56 @@ export default function RcDetails() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: window.innerWidth < 768 ? "1fr" : "1fr 300px",
+                gridTemplateColumns:
+                  window.innerWidth < 768 ? "1fr" : "repeat(3, 1fr)",
                 gap: 12,
                 marginBottom: 20,
               }}
             >
               <ValidityCard
                 label="Registration Validity"
-                date={formatDate(car.registrationValidity)}
+                date={car.registrationValidity}
                 status={getValidityStatus(car.registrationValidity)}
               />
               <ValidityCard
                 label="Insurance Validity"
-                date={formatDate(car.insuranceValidity)}
+                date={car.insuranceValidity}
                 status={getValidityStatus(car.insuranceValidity)}
               />
               <ValidityCard
-                label="Pollution (PUC) Validity"
-                date={formatDate(car.pollutionValidity)}
-                status={getValidityStatus(car.pollutionValidity)}
+                label="PUC Validity"
+                date={car.puccValidity}
+                status={getValidityStatus(car.puccValidity)}
+              />
+              <ValidityCard
+                label="Tax Validity"
+                date={car.taxValidity}
+                status={getValidityStatus(car.taxValidity)}
               />
             </div>
             <Grid>
-              <Field
-                label="Registration Date"
-                value={formatDate(car.registrationDate)}
-              />
+              <Field label="Registration Date" value={car.registrationDate} />
+              <Field label="RC Status" value={car.rcStatus} />
+              <Field label="Status As On" value={car.statusAsOn} />
               <Field label="RTO Office" value={car.rtoOffice} />
+              <Field label="RTO Code" value={car.rtoCode} />
+              <Field label="PUCC Number" value={car.puccNumber} />
+              <Field label="Insurance Company" value={car.insuranceCompany} />
+              <Field
+                label="Insurance Policy No."
+                value={car.insurancePolicyNumber}
+              />
+              <Field
+                label="Financed"
+                value={
+                  car.financed === true
+                    ? "Yes"
+                    : car.financed === false
+                      ? "No"
+                      : "—"
+                }
+              />
+              <Field label="Financer" value={car.financer} />
             </Grid>
           </Section>
         </div>

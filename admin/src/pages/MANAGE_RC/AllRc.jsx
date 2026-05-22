@@ -87,6 +87,7 @@ export default function AllRc() {
       };
       const res = await api.get("/admin/rc-details", { params });
       if (res.data.success) {
+        console.log("res.data.data ", res.data.data);
         setRecords(res.data.data || []);
         const pg = res.data.pagination || {};
         setTotalPages(pg.totalPages || 1);
@@ -169,10 +170,10 @@ export default function AllRc() {
 
   // ── Stats ───────────────────────────────────────────────────────
   const activeCount = records.filter(
-    (r) => r.carDetail?.status === "Active",
+    (r) => r.carDetail?.carData?.status === "Active",
   ).length;
   const expiredCount = records.filter(
-    (r) => r.carDetail?.status !== "Active",
+    (r) => r.carDetail?.carData?.status !== "Active",
   ).length;
 
   return (
@@ -736,7 +737,7 @@ export default function AllRc() {
                 </thead>
                 <tbody>
                   {records.map((rc, idx) => {
-                    const cd = rc.carDetail || {};
+                    const cd = rc.carDetail?.carData || {};
                     const regExpiry = cd.registrationValidity
                       ? new Date(cd.registrationValidity)
                       : null;
@@ -970,15 +971,20 @@ export default function AllRc() {
                           style={{ padding: "13px 16px", whiteSpace: "nowrap" }}
                         >
                           <Badge
-                            bg={RC_STATUS_COLORS[cd.status]?.bg || "#f3f4f6"}
+                            bg={
+                              RC_STATUS_COLORS[cd.rcStatus || cd.status]?.bg ||
+                              "#f3f4f6"
+                            }
                             text={
-                              RC_STATUS_COLORS[cd.status]?.text || "#374151"
+                              RC_STATUS_COLORS[cd.rcStatus || cd.status]
+                                ?.text || "#374151"
                             }
                             border={
-                              RC_STATUS_COLORS[cd.status]?.border || "#e5e7eb"
+                              RC_STATUS_COLORS[cd.rcStatus || cd.status]
+                                ?.border || "#e5e7eb"
                             }
                           >
-                            {cd.status || "—"}
+                            {cd.rcStatus || cd.status || "—"}
                           </Badge>
                         </td>
 

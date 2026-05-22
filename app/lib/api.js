@@ -3,7 +3,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 const API_BASE =
-    process.env.EXPO_PUBLIC_API_BASE_URL || "http://www.api.bharatscrapfacilities.com";
+    "https://www.api.bharatscrapfacilities.com";
 
 const api = axios.create({
     baseURL: API_BASE,

@@ -155,11 +155,11 @@ export default function RCInputScreen({ route, navigation }) {
 
       if (data.success) {
         showToast('Car details fetched successfully!');
+        console.log("data",data)
 
         navigation.navigate('CarDetails', {
           carData: data.data,
           rcNumber: rcNum,
-          // rcImage: rcImage,        // optional: pass image to next screen
           from,
         });
       } else {

@@ -3,7 +3,7 @@ import api, { getAccessToken } from '../lib/api';
 
 const { LocationService } = NativeModules;
 
-const LOCATION_API_URL = `http://www.api.bharatscrapfacilities.com/api/auth/update_location`;
+const LOCATION_API_URL = `https://www.api.bharatscrapfacilities.com/api/auth/update_location`;
 
 // ─── Permissions ──────────────────────────────────────────────────────────────
 

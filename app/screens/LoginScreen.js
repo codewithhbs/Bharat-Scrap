@@ -17,7 +17,7 @@ import { Colors } from '../constants/colors';
 import Toast from '../components/Toast.js';
 import { saveTokens } from '../lib/api.js';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL; // 🔁 apna base URL yahan daalo
+const BASE_URL = 'https://www.api.bharatscrapfacilities.com'; // 🔁 apna base URL yahan daalo
 
 export default function LoginScreen({ navigation }) {
   const [phone, setPhone] = useState('');

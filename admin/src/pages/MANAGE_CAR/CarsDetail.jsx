@@ -2041,60 +2041,52 @@ export default function CarDetail() {
 
           {/* Car Details */}
           <Section title="Car Details" icon={Car}>
-            <Grid>
-              <Field label="Make" value={cd.make} />
-              <Field label="Model" value={cd.model} />
-              <Field label="Year" value={cd.manufacturingYear} />
-              <Field label="Color" value={cd.color} />
-              <Field label="Fuel Type" value={cd.fuelType} />
-              <Field label="Body Type" value={cd.bodyType} />
-              <Field label="Vehicle Class" value={cd.vehicleClass} />
-              <Field label="Seating" value={cd.seatingCapacity} />
-              <Field label="Standing" value={cd.standingCapacity} />
-              <Field
-                label="Unladen Weight"
-                value={cd.unladenWeight ? `${cd.unladenWeight} kg` : undefined}
-              />
-              <Field
-                label="GVW"
-                value={
-                  cd.grossVehicleWeight
-                    ? `${cd.grossVehicleWeight} kg`
-                    : undefined
-                }
-              />
-              <Field
-                label="KM Driven"
-                value={
-                  car.kmDriven
-                    ? `${Number(car.kmDriven).toLocaleString("en-IN")} km`
-                    : undefined
-                }
-              />
-            </Grid>
-          </Section>
+  <Grid>
+    <Field label="Make" value={cd.make} />
+    <Field label="Model" value={cd.model} />
+    <Field label="Year" value={cd.manufacturingYear} />
+    <Field label="Color" value={cd.color} />
+    <Field label="Fuel Type" value={cd.fuelType} />
+    <Field label="Body Type" value={cd.bodyType} />
+    <Field label="Vehicle Class" value={cd.vehicleClass} />
+    <Field label="Seating Capacity" value={cd.seatingCapacity} />
+    <Field label="Vehicle Category" value={cd.vehicleCategory} />
+    <Field label="Variant / Norms" value={cd.variant} />
+    <Field label="Cubic Capacity" value={cd.cubicCapacity} />
+    <Field label="Cylinders" value={cd.cylinderCount} />
+    <Field label="Wheelbase" value={cd.wheelbase} />
+    <Field label="Unladen Weight" value={cd.unladenWeight} />
+    <Field label="Gross Weight" value={cd.grossWeight} />
+    <Field label="KM Driven" value={car.kmDriven ? `${Number(car.kmDriven).toLocaleString("en-IN")} km` : undefined} />
+  </Grid>
+</Section>
 
           {/* Registration */}
           <Section title="Registration & Documents" icon={FileText}>
-            <Grid>
-              <Field label="RC Number" value={cd.rcNumber || car.rcNumber} />
-              <Field label="Registration Date" value={cd.registrationDate} />
-              <Field
-                label="Registration Valid"
-                value={cd.registrationValidity}
-              />
-              <Field label="Insurance Valid" value={cd.insuranceValidity} />
-              <Field label="Pollution Valid" value={cd.pollutionValidity} />
-              <Field label="RC Status" value={cd.status} />
-              <Field label="Owner Name" value={cd.ownerName} />
-              <Field label="Father Name" value={cd.fatherName} />
-              <Field label="RTO Office" value={cd.rtoOffice} />
-              <Field label="Vehicle Category" value={cd.vehicleCategory} />
-              <Field label="Chassis Number" value={cd.chassisNumber} />
-              <Field label="Engine Number" value={cd.engineNumber} />
-              <Field label="Address" full value={cd.address} />
-            </Grid>
-          </Section>
+  <Grid>
+    <Field label="RC Number" value={cd.rcNumber || car.rcNumber} />
+    <Field label="RC Status" value={cd.rcStatus} />
+    <Field label="Status As On" value={cd.statusAsOn} />
+    <Field label="Registration Date" value={cd.registrationDate} />
+    <Field label="Valid Till" value={cd.registrationValidity} />
+    <Field label="Tax Valid Till" value={cd.taxValidity} />
+    <Field label="Owner Name" value={cd.ownerName} />
+    <Field label="Father's Name" value={cd.fatherName} />
+    <Field label="Owner Count" value={cd.ownerCount} />
+    <Field label="RTO Office" value={cd.rtoOffice} />
+    <Field label="RTO Code" value={cd.rtoCode} />
+    <Field label="Chassis Number" value={cd.chassisNumber} />
+    <Field label="Engine Number" value={cd.engineNumber} />
+    <Field label="Insurance Company" value={cd.insuranceCompany} />
+    <Field label="Insurance Policy No." value={cd.insurancePolicyNumber} />
+    <Field label="Insurance Valid Till" value={cd.insuranceValidity} />
+    <Field label="PUCC Number" value={cd.puccNumber} />
+    <Field label="PUC Valid Till" value={cd.puccValidity} />
+    <Field label="Financer" value={cd.financer} />
+    <Field label="Present Address" full value={cd.presentAddress} />
+    <Field label="Permanent Address" full value={cd.permanentAddress} />
+  </Grid>
+</Section>
 
           {/* Payment */}
           <Section title="Payment Details" icon={CreditCard}>
