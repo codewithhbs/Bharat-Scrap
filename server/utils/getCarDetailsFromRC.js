@@ -3,7 +3,7 @@ const API_KEY = "e8784ab3-873a-403f-802b-e1d7ec6dd8a3";
 const TOKEN_ID = "dDzJt2Xec2qwn37fVOYylVa8V6uSaUkB";
 
 // Environment toggle: "prod" or "uat"
-const ENVIRONMENT = "uat";
+const ENVIRONMENT = "prod";
 
 const BASE_URLS = {
   prod: "https://javabackend.idspay.in/api/v1/prod",

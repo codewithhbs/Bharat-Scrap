@@ -365,7 +365,7 @@ export default function Page() {
       const res  = await fetch(`${BASE_URL}/auth/verify-user`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp: otp.join('') }),
+        body: JSON.stringify({ phone, otp: otp.join(''), where: 'web' }),
       });
       const data = await res.json();
       if (data.success) {
