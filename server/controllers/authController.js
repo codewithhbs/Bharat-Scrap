@@ -80,7 +80,7 @@ async function register(req, res) {
 
 async function verifyUser(req, res) {
     try {
-        const { phone, otp, where = 'app' } = req.body;
+        const { phone, otp } = req.body;
         if (!phone || !otp) {
             return res.status(400).json({
                 success: false,
@@ -108,22 +108,6 @@ async function verifyUser(req, res) {
         user.otpExpiry = null;
         user.isPhoneVerified = true;
         await user.save();
-        if (where === 'web') {
-            if (user.role === 'craneMan') {
-                return res.status(403).json({
-                    success: false,
-                    message: "Crane operators cannot access the web dashboard",
-                });
-            }
-            res.status(201).json({
-                success: true,
-                message: "User verified successfully",
-                user: user,
-                sessionId: jti,
-                accessToken,
-                refreshToken
-            });
-        }
 
         res.status(201).json({
             success: true,
@@ -166,7 +150,7 @@ async function resendOTP(req, res) {
             });
         }
         const otp = generateOtp();
-        console.log("otp", otp)
+        console.log("otp",otp)
         const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
         user.otp = otp;
         user.otpExpiry = otpExpiry;
