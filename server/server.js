@@ -24,6 +24,10 @@ app.use(
       "http://192.168.1.13:3001",
       "http://192.168.1.13:3007",
       "http://localhost:5173",
+      "https://www.admin.bharatscrapfacilities.com",
+      "https://admin.bharatscrapfacilities.com",
+      "https://bharatscrapfacilities.com",
+      "https://www.bharatscrapfacilities.com",
       "*" // Allow all origins for testing; restrict in production
     ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
