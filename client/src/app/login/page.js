@@ -342,7 +342,7 @@ export default function Page() {
       const res  = await fetch(`${BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ phone, where: 'web' }),
       });
       const data = await res.json();
       if (data.success) {
@@ -365,7 +365,7 @@ export default function Page() {
       const res  = await fetch(`${BASE_URL}/auth/verify-user`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, otp: otp.join(''), where: 'web' }),
+        body: JSON.stringify({ phone, otp: otp.join('') }),
       });
       const data = await res.json();
       if (data.success) {

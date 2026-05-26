@@ -40,7 +40,7 @@ async function carRegister(req, res) {
         }
 
         const carDetailWithRC = await getCarDetailsFromRC(rcNumber);
-        console.log("carDetailWithRC", carDetailWithRC)
+        // console.log("carDetailWithRC", carDetailWithRC)
 
         // ============== DUMMY DATA FOR NOW ==============
         // const carDetailWithRC = {
@@ -111,15 +111,19 @@ async function carRegister(req, res) {
         return res.status(200).json({
             success: true,
             message: "Car registered successfully",
-            data: carDetailWithRC
+            data: carDetailWithRC.carData
         });
 
     } catch (error) {
-        console.log("Internal server error", error)
-        return res.status(500).json({
+        console.log("Internal server error", error);
+
+        const statusCode =
+            error.message?.includes("Insufficient balance") ? 422 : 500;
+
+        return res.status(statusCode).json({
             success: false,
-            message: "Internal server error"
-        })
+            message: error.message || "Internal server error"
+        });
     }
 }
 
@@ -268,7 +272,7 @@ async function fetchCarDetailForMe(req, res) {
             message: "Internal server error"
         })
     }
-} 
+}
 
 async function fetchCarDetailById(req, res) {
     try {
@@ -281,7 +285,7 @@ async function fetchCarDetailById(req, res) {
             });
         }
         let isUser
-        console.log("req.user?.role",req.user?.role)
+        console.log("req.user?.role", req.user?.role)
         if (req.user?.role === "user") {
             isUser = true;
         }

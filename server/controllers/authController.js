@@ -15,7 +15,9 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "dev-refresh-secret
 async function register(req, res) {
     try {
         console.log("i am hit")
-        const { phone } = req.body;
+        const { phone, where = 'app' } = req.body;
+
+        console.log("data", phone, where)
 
         if (!phone) {
             return res.status(400).json({
@@ -38,6 +40,22 @@ async function register(req, res) {
             existing.otp = otp;
             existing.otpExpiry = otpExpiry;
             await existing.save();
+
+            if (where === 'web') {
+                if(existing.role === 'craneMan') {
+                    return res.status(403).json({
+                        success: false,
+                        message: "Crane operators cannot access the web dashboard",
+                    });
+                }else{
+                    return res.status(200).json({
+                        success: true,
+                        message: "OTP sent successfully. Please verify OTP sent to your phone.",
+                        userId: existing._id,
+                    });
+                }
+            }
+
             return res.status(200).json({
                 success: true,
                 message: "OTP sent successfully. Please verify OTP sent to your phone.",
@@ -108,6 +126,22 @@ async function verifyUser(req, res) {
         user.otpExpiry = null;
         user.isPhoneVerified = true;
         await user.save();
+        // if (where === 'web') {
+        //     if (user.role === 'craneMan') {
+        //         return res.status(403).json({
+        //             success: false,
+        //             message: "Crane operators cannot access the web dashboard",
+        //         });
+        //     }
+        //     res.status(201).json({
+        //         success: true,
+        //         message: "User verified successfully",
+        //         user: user,
+        //         sessionId: jti,
+        //         accessToken,
+        //         refreshToken
+        //     });
+        // }
 
         res.status(201).json({
             success: true,
@@ -133,6 +167,7 @@ async function verifyUser(req, res) {
     }
 }
 
+
 async function resendOTP(req, res) {
     try {
         const { phone } = req.body;
@@ -150,7 +185,7 @@ async function resendOTP(req, res) {
             });
         }
         const otp = generateOtp();
-        console.log("otp",otp)
+        console.log("otp", otp)
         const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
         user.otp = otp;
         user.otpExpiry = otpExpiry;
