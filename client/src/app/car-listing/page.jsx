@@ -479,7 +479,7 @@ function StepRCInput({ onNext, savedData, onSave }) {
         setError(res.data.message || "Failed to register car");
       }
     } catch (err) {
-      console.log("object error",err)
+      console.log("object error", err);
       console.log("RC Register Error:", err.response?.data || err.message);
 
       let msg = "Network error. Please try again.";
@@ -730,11 +730,13 @@ function CarSVG() {
 }
 
 function StepCarDetails({ carData, rcNumber, onNext, onBack }) {
+  
+
   if (!carData)
     return (
       <div style={{ textAlign: "center", padding: 60, color: C.textSoft }}>
-        <div style={{ fontSize: 40, marginBottom: 12 }}>🚗</div>
-        <div>No car data found</div>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>🏍️</div>
+        <div>No vehicle data found</div>
         <button
           className="btn-ghost"
           style={{ marginTop: 20, width: "auto", padding: "0 24px" }}
@@ -744,22 +746,60 @@ function StepCarDetails({ carData, rcNumber, onNext, onBack }) {
         </button>
       </div>
     );
+    const onlyCarData = carData || null;
 
   const specs = [
     {
       label: "Manufacturing Year",
-      value: carData.manufacturingYear,
+      value: onlyCarData?.manufacturingYear,
       icon: "📅",
     },
-    { label: "Fuel Type", value: carData.fuelType, icon: "⛽" },
-    { label: "Vehicle Class", value: carData.vehicleClass, icon: "🏷️" },
-    { label: "Body Type", value: carData.bodyType, icon: "🚙" },
-    { label: "Color", value: carData.color, icon: "🎨" },
-    { label: "Seating Capacity", value: carData.seatingCapacity, icon: "💺" },
+    { label: "Fuel Type", value: onlyCarData?.fuelType, icon: "⛽" },
+    {
+      label: "Engine CC",
+      value: onlyCarData?.cubicCapacity
+        ? `${onlyCarData.cubicCapacity} cc`
+        : null,
+      icon: "🔧",
+    },
+    { label: "Cylinders", value: onlyCarData?.cylinderCount, icon: "⚙️" },
+    { label: "Vehicle Class", value: onlyCarData?.vehicleClass, icon: "🏷️" },
+    { label: "Body Type", value: onlyCarData?.bodyType, icon: "🚙" },
+    { label: "Color", value: onlyCarData?.color, icon: "🎨" },
+    {
+      label: "Seating Capacity",
+      value: onlyCarData?.seatingCapacity,
+      icon: "💺",
+    },
+    {
+      label: "Wheelbase",
+      value: onlyCarData?.wheelbase ? `${onlyCarData.wheelbase} mm` : null,
+      icon: "📏",
+    },
+    {
+      label: "Gross Weight",
+      value: onlyCarData?.grossWeight ? `${onlyCarData.grossWeight} kg` : null,
+      icon: "⚖️",
+    },
+    {
+      label: "Unladen Weight",
+      value: onlyCarData?.unladenWeight
+        ? `${onlyCarData.unladenWeight} kg`
+        : null,
+      icon: "🪶",
+    },
+    {
+      label: "Owner Count",
+      value: onlyCarData?.ownerCount
+        ? `${onlyCarData.ownerCount}${onlyCarData.ownerCount === "1" ? "st" : onlyCarData.ownerCount === "2" ? "nd" : "rd"} Owner`
+        : null,
+      icon: "👤",
+    },
   ];
 
   return (
     <div style={{ animation: "fadeUp 0.32s ease" }}>
+      {/* ── Header Card ── */}
       <div
         style={{
           background: `linear-gradient(135deg, ${C.greenLight} 0%, #EBF4FF 100%)`,
@@ -779,42 +819,98 @@ function StepCarDetails({ carData, rcNumber, onNext, onBack }) {
             marginTop: 12,
           }}
         >
-          {carData.make} {carData.model}
+          {onlyCarData?.make} {onlyCarData?.model}
         </div>
         <div style={{ fontSize: 13, color: C.textMid, marginTop: 4 }}>
-          {carData.variant || carData.bodyType} · {rcNumber}
+          {onlyCarData?.variant || onlyCarData?.bodyType} ·{" "}
+          {rcNumber || onlyCarData?.rcNumber}
         </div>
         <div
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 5,
-            background: C.greenLight,
-            border: `1px solid ${C.greenMid}`,
-            borderRadius: 20,
-            padding: "4px 12px",
+            display: "flex",
+            justifyContent: "center",
+            gap: 8,
+            flexWrap: "wrap",
             marginTop: 10,
           }}
         >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke={C.green}
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          {/* Verified badge */}
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              background: C.greenLight,
+              border: `1px solid ${C.greenMid}`,
+              borderRadius: 20,
+              padding: "4px 12px",
+            }}
           >
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22 4 12 14.01 9 11.01" />
-          </svg>
-          <span style={{ fontSize: 11, fontWeight: 700, color: C.greenDark }}>
-            Data Verified from RC
-          </span>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={C.green}
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+            <span style={{ fontSize: 11, fontWeight: 700, color: C.greenDark }}>
+              Data Verified from RC
+            </span>
+          </div>
+          {/* RC Status badge */}
+          {onlyCarData?.rcStatus && (
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                background:
+                  onlyCarData?.rcStatus === "Active" ? C.greenLight : "#FFF3CD",
+                border: `1px solid ${onlyCarData?.rcStatus === "Active" ? C.greenMid : "#FFC107"}`,
+                borderRadius: 20,
+                padding: "4px 12px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color:
+                    onlyCarData?.rcStatus === "Active" ? C.greenDark : "#856404",
+                }}
+              >
+                RC: {onlyCarData?.rcStatus}
+              </span>
+            </div>
+          )}
+          {/* Financed badge */}
+          {onlyCarData?.financed && (
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                background: "#FFF3CD",
+                border: "1px solid #FFC107",
+                borderRadius: 20,
+                padding: "4px 12px",
+              }}
+            >
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#856404" }}>
+                🏦 Financed
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* ── Vehicle Specs Grid ── */}
       <div className="section-card">
         <div className="section-title">Vehicle Specifications</div>
         <div className="spec-grid">
@@ -828,20 +924,155 @@ function StepCarDetails({ carData, rcNumber, onNext, onBack }) {
         </div>
       </div>
 
+      {/* ── Engine & Chassis ── */}
       <div className="section-card">
-        <div className="section-title">Registration Details</div>
+        <div className="section-title">Engine & Chassis</div>
         {[
-          ["Owner Name", carData.ownerName],
-          ["Father Name", carData.fatherName],
-          ["RTO Office", carData.rtoOffice],
-          ["Registration Date", carData.registrationDate],
-          ["Registration Valid Till", carData.registrationValidity],
+          ["Chassis Number", onlyCarData?.chassisNumber],
+          ["Engine Number", onlyCarData?.engineNumber],
+          ["Vehicle Category", onlyCarData?.vehicleCategory],
+          ["Variant", onlyCarData?.variant],
         ].map(([k, v]) => (
           <div key={k} className="rto-row">
             <span className="rto-key">{k}</span>
             <span
               className="rto-val"
-              style={k === "Registration Valid Till" ? { color: C.green } : {}}
+              style={{ fontSize: 12, wordBreak: "break-all" }}
+            >
+              {v || "—"}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Registration Details ── */}
+      <div className="section-card">
+        <div className="section-title">Registration Details</div>
+        {[
+          ["Owner Name", onlyCarData?.ownerName],
+          ["RTO Office", onlyCarData?.rtoOffice],
+          ["Registration Date", onlyCarData?.registrationDate],
+          ["Registration Valid Till", onlyCarData?.registrationValidity],
+          ["RC Status", onlyCarData?.rcStatus],
+          ["Data As On", onlyCarData?.statusAsOn],
+        ].map(([k, v]) => (
+          <div key={k} className="rto-row">
+            <span className="rto-key">{k}</span>
+            <span
+              className="rto-val"
+              style={
+                k === "Registration Valid Till" || k === "RC Status"
+                  ? { color: C.green }
+                  : {}
+              }
+            >
+              {v || "—"}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Insurance Details ── */}
+      <div className="section-card">
+        <div className="section-title">Insurance Details</div>
+        {[
+          ["Insurance Company", onlyCarData?.insuranceCompany],
+          ["Policy Number", onlyCarData?.insurancePolicyNumber],
+          ["Insurance Valid Till", onlyCarData?.insuranceValidity],
+        ].map(([k, v]) => (
+          <div key={k} className="rto-row">
+            <span className="rto-key">{k}</span>
+            <span
+              className="rto-val"
+              style={k === "Insurance Valid Till" ? { color: C.green } : {}}
+            >
+              {v || "—"}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Tax & PUCC ── */}
+      <div className="section-card">
+        <div className="section-title">Tax & PUCC</div>
+        {[
+          ["Tax Valid Till", onlyCarData?.taxValidity],
+          ["PUCC Number", onlyCarData?.puccNumber],
+          ["PUCC Valid Till", onlyCarData?.puccValidity],
+        ].map(([k, v]) => (
+          <div key={k} className="rto-row">
+            <span className="rto-key">{k}</span>
+            <span
+              className="rto-val"
+              style={
+                k === "Tax Valid Till" || k === "PUCC Valid Till"
+                  ? { color: C.green }
+                  : {}
+              }
+            >
+              {v || "—"}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Finance Details ── */}
+      {onlyCarData.financed && (
+        <div className="section-card">
+          <div className="section-title">Finance Details</div>
+          {[
+            ["Financed", onlyCarData?.financed ? "Yes" : "No"],
+            ["Financer", onlyCarData.financer],
+          ].map(([k, v]) => (
+            <div key={k} className="rto-row">
+              <span className="rto-key">{k}</span>
+              <span className="rto-val">{v || "—"}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Blacklist & Challans ── */}
+      <div className="section-card">
+        <div className="section-title">Blacklist & Challans</div>
+        {[
+          ["Blacklist Status", onlyCarData?.blacklistStatus || "Clean"],
+          [
+            "Blacklist Records",
+            onlyCarData?.blacklistDetails?.length > 0
+              ? `${onlyCarData.blacklistDetails.length} record(s)`
+              : "None",
+          ],
+          [
+            "Pending Challans",
+            onlyCarData?.challanDetails?.length > 0
+              ? `${onlyCarData.challanDetails.length} challan(s)`
+              : "None",
+          ],
+        ].map(([k, v]) => (
+          <div key={k} className="rto-row">
+            <span className="rto-key">{k}</span>
+            <span className="rto-val" style={{ color: C.green }}>
+              {v || "—"}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Address ── */}
+      <div className="section-card">
+        <div className="section-title">Address</div>
+        {[
+          ["Present Address", onlyCarData?.presentAddress],
+          ["Permanent Address", onlyCarData?.permanentAddress],
+        ].map(([k, v]) => (
+          <div key={k} className="rto-row" style={{ alignItems: "flex-start" }}>
+            <span className="rto-key" style={{ paddingTop: 2 }}>
+              {k}
+            </span>
+            <span
+              className="rto-val"
+              style={{ fontSize: 12, textAlign: "right", maxWidth: "60%" }}
             >
               {v || "—"}
             </span>
@@ -917,18 +1148,104 @@ function StepConditionForm({
   const [isRunning, setRunning] = useState(savedData?.isRunning ?? true);
   const [missingPart, setMissing] = useState(savedData?.missingPart ?? false);
   const [pickup, setPickup] = useState(savedData?.pickup ?? "");
-  const [previews, setPreviews] = useState({}); // objectURLs — sirf preview ke liye
-  const [imageFiles, setImageFiles] = useState({}); // ✅ actual File objects
+  const [streetAndHouse, setStreetAndHouse] = useState(
+    savedData?.streetAndHouse ?? "",
+  );
+  const [pickupLatLng, setPickupLatLng] = useState(
+    savedData?.pickupLatLng ?? {
+      latitude: null,
+      longitude: null,
+      placeId: null,
+    },
+  );
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [previews, setPreviews] = useState({});
+  const [imageFiles, setImageFiles] = useState({});
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ msg: "", type: "info" });
   const fileRefs = useRef({});
+  const autocompleteRef = useRef(null);
+  const debounceRef = useRef(null);
+
+  const GOOGLE_API_KEY = "AIzaSyD022IF_7EVi9DEqKBizpz6vXM_nuFeE1g";
 
   const showToast = (msg, type = "info") => {
     setToast({ msg, type });
     setTimeout(() => setToast({ msg: "", type: "info" }), 2500);
   };
 
-  // ✅ Preview aur File dono alag store karo
+  const autocompleteServiceRef = useRef(null);
+  const placesServiceRef = useRef(null);
+
+  // SDK load hone ke baad initialize karo
+  useEffect(() => {
+    if (window.google?.maps?.places) {
+      autocompleteServiceRef.current =
+        new window.google.maps.places.AutocompleteService();
+      // PlacesService ko ek dummy div chahiye
+      placesServiceRef.current = new window.google.maps.places.PlacesService(
+        document.createElement("div"),
+      );
+    }
+  }, []);
+
+  const fetchSuggestions = (input) => {
+    if (!input || input.length < 2 || !autocompleteServiceRef.current) {
+      setSuggestions([]);
+      return;
+    }
+    autocompleteServiceRef.current.getPlacePredictions(
+      { input, componentRestrictions: { country: "in" }, language: "en" },
+      (predictions, status) => {
+        if (
+          status === window.google.maps.places.PlacesServiceStatus.OK &&
+          predictions
+        ) {
+          setSuggestions(predictions);
+          setShowSuggestions(true);
+        } else {
+          setSuggestions([]);
+        }
+      },
+    );
+  };
+
+  const fetchPlaceDetails = (placeId) => {
+    if (!placesServiceRef.current) return;
+    placesServiceRef.current.getDetails(
+      { placeId, fields: ["geometry", "formatted_address"] },
+      (place, status) => {
+        if (
+          status === window.google.maps.places.PlacesServiceStatus.OK &&
+          place?.geometry?.location
+        ) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          setPickupLatLng({ latitude: lat, longitude: lng, placeId });
+          onSave({ pickupLatLng: { latitude: lat, longitude: lng, placeId } });
+        }
+      },
+    );
+  };
+
+  const handlePickupInput = (val) => {
+    setPickup(val);
+    setPickupLatLng({ latitude: null, longitude: null, placeId: null });
+    onSave({ pickup: val });
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchSuggestions(val), 300);
+  };
+
+  const handleSelectSuggestion = (suggestion) => {
+    setPickup(suggestion.description);
+    onSave({ pickup: suggestion.description });
+    setSuggestions([]);
+    setShowSuggestions(false);
+    fetchPlaceDetails(suggestion.place_id);
+  };
+
+  // ── Image Pick ──────────────────────────────────────────────────────────
   const handleImagePick = (slotKey, e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -937,19 +1254,36 @@ function StepConditionForm({
     setImageFiles((prev) => ({ ...prev, [slotKey]: file }));
   };
 
+  // ── Submit ──────────────────────────────────────────────────────────────
   const submit = async () => {
     if (!imageFiles.frontImage) {
       showToast("Please upload at least the front photo", "error");
       return;
     }
+    if (!pickup || !pickupLatLng.latitude) {
+      showToast("Please search and select a pickup location", "error");
+      return;
+    }
+    if (!streetAndHouse.trim()) {
+      showToast("Please enter your house no. and street", "error");
+      return;
+    }
 
     setLoading(true);
-    onSave({ km, scratches, accidents, isRunning, missingPart, pickup });
+    onSave({
+      km,
+      scratches,
+      accidents,
+      isRunning,
+      missingPart,
+      pickup,
+      streetAndHouse,
+      pickupLatLng,
+    });
 
     try {
       const formData = new FormData();
 
-      // ✅ Direct File objects append karo
       for (const { key } of IMAGE_SLOTS) {
         if (imageFiles[key]) {
           formData.append(key, imageFiles[key], imageFiles[key].name);
@@ -961,16 +1295,17 @@ function StepConditionForm({
       formData.append("isAccident", accidents.toString());
       formData.append("isRunningCondition", isRunning.toString());
       formData.append("anyMissingPart", missingPart.toString());
-      formData.append("pickupLocation", pickup);
+      formData.append("pickupAddress", pickup);
+      formData.append("pickupStreetAndHouse", streetAndHouse);
+      formData.append("pickupLatitude", pickupLatLng.latitude.toString());
+      formData.append("pickupLongitude", pickupLatLng.longitude.toString());
+      if (pickupLatLng.placeId)
+        formData.append("pickupPlaceId", pickupLatLng.placeId);
 
-      // ✅ axios api.put
       const res = await api.put(
         `/car/car-detail-update/${rcNumber}`,
         formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-          timeout: 60000,
-        },
+        { headers: { "Content-Type": "multipart/form-data" }, timeout: 60000 },
       );
 
       if (res.data?.success) {
@@ -979,7 +1314,6 @@ function StepConditionForm({
         showToast(res.data?.message || "Update failed", "error");
       }
     } catch (err) {
-      console.log("Condition Update Error:", err.response?.data || err.message);
       const status = err.response?.status;
       if (status === 400)
         showToast(err.response?.data?.message || "Invalid request.");
@@ -998,7 +1332,7 @@ function StepConditionForm({
     <>
       <Toast {...toast} />
       <div style={{ animation: "fadeUp 0.32s ease" }}>
-        {/* KM Driven */}
+        {/* ── KM Driven ── */}
         <div className="section-card">
           <div
             style={{
@@ -1039,21 +1373,154 @@ function StepConditionForm({
           </div>
         </div>
 
-        {/* Pickup location */}
-        <div className="section-card">
+        {/* ── Pickup Location ── */}
+        <div
+          className="section-card"
+          style={{ position: "relative", zIndex: 100 }}
+        >
           <div className="section-title">Pickup Location</div>
-          <input
-            className="field-input"
-            placeholder="e.g. Rohini West, New Delhi"
-            value={pickup}
-            onChange={(e) => {
-              setPickup(e.target.value);
-              onSave({ pickup: e.target.value });
-            }}
-          />
+          <div style={{ fontSize: 11, color: C.textSoft, marginBottom: 8 }}>
+            Search and select your area / locality
+          </div>
+
+          {/* Search Input */}
+          <div style={{ position: "relative" }} ref={autocompleteRef}>
+            <input
+              className="field-input"
+              placeholder="Search location..."
+              value={pickup}
+              onChange={(e) => handlePickupInput(e.target.value)}
+              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+              autoComplete="off"
+            />
+
+            {/* Dropdown */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 4px)",
+                  left: 0,
+                  right: 0,
+                  background: "#fff",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: 10,
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
+                  zIndex: 999,
+                  overflow: "hidden",
+                  maxHeight: 220,
+                  overflowY: "auto",
+                }}
+              >
+                {suggestions.map((s, i) => (
+                  <div
+                    key={s.place_id}
+                    onClick={() => handleSelectSuggestion(s)}
+                    style={{
+                      padding: "10px 14px",
+                      fontSize: 13,
+                      color: C.text,
+                      cursor: "pointer",
+                      borderBottom:
+                        i < suggestions.length - 1
+                          ? "1px solid #F3F4F6"
+                          : "none",
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 8,
+                    }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.background = "#F9FAFB")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.background = "#fff")
+                    }
+                  >
+                    <span style={{ fontSize: 14, marginTop: 1 }}>📍</span>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>
+                        {s.structured_formatting?.main_text || s.description}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: C.textSoft,
+                          marginTop: 1,
+                        }}
+                      >
+                        {s.structured_formatting?.secondary_text || ""}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Selected Location Confirm */}
+          {pickupLatLng.latitude && (
+            <div
+              style={{
+                background: "#F0F9FF",
+                border: "1px solid #BAE6FD",
+                borderRadius: 10,
+                padding: "10px 12px",
+                marginTop: 10,
+                display: "flex",
+                gap: 8,
+              }}
+            >
+              <span style={{ fontSize: 16 }}>✅</span>
+              <div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#0369A1",
+                    marginBottom: 2,
+                  }}
+                >
+                  Location Selected
+                </div>
+                <div style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>
+                  {pickup}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: C.textSoft,
+                    fontFamily: "monospace",
+                    marginTop: 2,
+                  }}
+                >
+                  {pickupLatLng.latitude.toFixed(5)},{" "}
+                  {pickupLatLng.longitude.toFixed(5)}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* House No. & Street */}
+          <div style={{ marginTop: 14 }}>
+            <div className="section-title" style={{ marginBottom: 4 }}>
+              House No. & Street
+            </div>
+            <div style={{ fontSize: 11, color: C.textSoft, marginBottom: 8 }}>
+              Exact landmark for pickup crane to reach you
+            </div>
+            <input
+              className="field-input"
+              placeholder="e.g. H-42, Gali No. 3, Near Apollo Hospital"
+              value={streetAndHouse}
+              onChange={(e) => {
+                setStreetAndHouse(e.target.value);
+                onSave({ streetAndHouse: e.target.value });
+              }}
+            />
+          </div>
         </div>
 
-        {/* Toggles */}
+        {/* ── Toggles ── */}
         <div className="section-card">
           <div className="section-title">Vehicle Condition</div>
           <ToggleRow
@@ -1094,7 +1561,7 @@ function StepConditionForm({
           />
         </div>
 
-        {/* Photos grid */}
+        {/* ── Car Photos ── */}
         <div className="section-card">
           <div
             style={{
@@ -1191,8 +1658,8 @@ function StepConditionForm({
                     textAlign: "center",
                     fontSize: 10,
                     fontWeight: 700,
-                    color: previews[slot.key] ? C.green : C.textSoft,
                     marginTop: 4,
+                    color: previews[slot.key] ? C.green : C.textSoft,
                   }}
                 >
                   {slot.label}
@@ -1209,6 +1676,7 @@ function StepConditionForm({
           </div>
         </div>
 
+        {/* ── Submit ── */}
         <button className="btn-primary" onClick={submit} disabled={loading}>
           {loading ? (
             <>
@@ -1256,7 +1724,7 @@ function calculatePrice(carDetail) {
     };
   const basePrice = 450000;
   const currentYear = new Date().getFullYear();
-  const age = currentYear - (carDetail.manufacturingYear || currentYear);
+  const age = currentYear - (carDetail?.manufacturingYear || currentYear);
   const kmDriven = carDetail.kmDriven || 45000;
   const yearDep = Math.max(0, age * 12000);
   const kmDep = Math.floor(kmDriven / 1000) * 800;
@@ -1578,15 +2046,18 @@ function StepPriceResult({ rcNumber, carDetail, onNext, onSave }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function StepSuccess({ rcNumber, carDetail, onGoHome }) {
   const carName = carDetail
-    ? `${carDetail.make || ""} ${carDetail.model || ""}`.trim() || "Your Car"
+    ? `${carDetail?.make || ""} ${carDetail?.model || ""}`.trim() || "Your Car"
     : "Your Car";
   const details = [
     ["Car", carName],
     ["RC Number", rcNumber || carDetail?.rcNumber || "N/A"],
-    ["Estimated Price", `₹${carDetail.price}`],
+    ["Estimated Price", `₹${carDetail?.price}`],
     ["Status", "Under Review"],
     ["Request ID", carDetail?._id || "N/A"],
   ];
+  const onGoListing = () => {
+    window.location.href = "/history";
+  }
 
   return (
     <div style={{ textAlign: "center", animation: "fadeUp 0.4s ease" }}>

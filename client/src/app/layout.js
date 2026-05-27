@@ -62,6 +62,7 @@ export default function RootLayout({ children }) {
         <Script src="/assets/js/vendor/jquery.countdown.min.js" strategy="lazyOnload" />
         <Script src="/assets/js/plugins/noUISlider.js" strategy="lazyOnload" />
         <Script src="/assets/js/plugins/slider.js" strategy="lazyOnload" />
+        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD022IF_7EVi9DEqKBizpz6vXM_nuFeE1g&libraries=places"></script>
 
         {/* Main script loads last, after all plugins */}
         <Script src="/assets/js/main.js" strategy="lazyOnload" />

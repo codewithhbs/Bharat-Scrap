@@ -82,7 +82,8 @@ export default function Page() {
       const res = await api('/car/car-details-for-me');
       const data = res.data;
       if (data?.success) {
-        setCars(data.data || []);
+        const sorted = (data.data || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setCars(sorted);
       } else {
         toast.error(data?.message || 'Something went wrong while fetching data');
       }
@@ -378,7 +379,7 @@ export default function Page() {
               {filtered.map(item => {
                 const detail  = item.carDetail || {};
                 const carName = `${detail.make || ''} ${detail.model || ''}`.trim() || 'Unknown Car';
-                const year    = detail.manufacturingYear || '';
+                const year    = detail?.manufacturingYear || '';
                 const plate   = item.rcNumber || detail.rcNumber || '—';
                 const km      = item.kmDriven
                   ? Number(item.kmDriven).toLocaleString('en-IN') + ' km'
