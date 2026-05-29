@@ -4,7 +4,6 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Script from "next/script";
 
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -17,7 +16,8 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "Bharat Scrap Facilities | Authorized Vehicle Scrapping & Recycling Center",
-  description: "Bharat Scrap Facilities provides authorized vehicle scrapping, eco-friendly recycling, and instant quotes for old cars across Delhi NCR and nearby regions.",
+  description:
+    "Bharat Scrap Facilities provides authorized vehicle scrapping, eco-friendly recycling, and instant quotes for old cars across Delhi NCR and nearby regions.",
 };
 
 export default function RootLayout({ children }) {
@@ -32,15 +32,47 @@ export default function RootLayout({ children }) {
         <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon/favicon-16x16.png" />
         <link rel="manifest" href="/assets/favicon/site.webmanifest" />
         <link href="/assets/css/main.css" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        />
+
+        {/* Google Tag Manager */}
+        <Script
+          id="gtm-script"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-W6WKLCJX');`,
+          }}
+        />
+        {/* End Google Tag Manager */}
       </head>
       <body suppressHydrationWarning={true}>
+
+        {/* Google Tag Manager (noscript) */}
+        <noscript>
+          <iframe
+            src="https://www.googletagmanager.com/ns.html?id=GTM-W6WKLCJX"
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
+        </noscript>
+        {/* End Google Tag Manager (noscript) */}
+
         <Header />
         {children}
         <Footer />
 
-        {/* Vendor Scripts - must load in order, so use beforeInteractive for jQuery */}
+        {/* Vendor Scripts - must load in order */}
         <Script src="/assets/js/vendor/jquery-3.7.1.min.js" strategy="beforeInteractive" />
         <Script src="/assets/js/vendor/jquery-migrate-3.3.0.min.js" strategy="beforeInteractive" />
         <Script src="/assets/js/vendor/bootstrap.bundle.min.js" strategy="beforeInteractive" />
@@ -62,9 +94,14 @@ export default function RootLayout({ children }) {
         <Script src="/assets/js/vendor/jquery.countdown.min.js" strategy="lazyOnload" />
         <Script src="/assets/js/plugins/noUISlider.js" strategy="lazyOnload" />
         <Script src="/assets/js/plugins/slider.js" strategy="lazyOnload" />
-        <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD022IF_7EVi9DEqKBizpz6vXM_nuFeE1g&libraries=places"></script>
 
-        {/* Main script loads last, after all plugins */}
+        {/* Google Maps */}
+        <Script
+          src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD022IF_7EVi9DEqKBizpz6vXM_nuFeE1g&libraries=places"
+          strategy="lazyOnload"
+        />
+
+        {/* Main script - loads last after all plugins */}
         <Script src="/assets/js/main.js" strategy="lazyOnload" />
       </body>
     </html>
