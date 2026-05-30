@@ -1,5 +1,6 @@
 import Brand from '@/components/Brand'
 import FAQ from '@/components/FAQ'
+import HomeSearch from '@/components/HomeSearch'
 import Service from '@/components/Service'
 import React from 'react'
 
@@ -33,7 +34,7 @@ export default function Home() {
       </section>
 
       {/* <!-- search 1 --> */}
-      <section className="box-section box-search-advance-home10">
+      {/* <section className="box-section box-search-advance-home10">
         <div id="filter_form2">
           <div className="container">
             <div className="main_bg white-text">
@@ -345,7 +346,8 @@ export default function Home() {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
+      <HomeSearch />
 
 
 
