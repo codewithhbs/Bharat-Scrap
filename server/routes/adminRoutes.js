@@ -47,10 +47,11 @@ router.get("/users/:id", authenticateAccessToken, authorizeRoles("admin"), admin
 
 router.get("/dashboard-data", adminController.getDashboardData);
 
-router.get("/cars", adminController.getAllCars);
+router.get("/cars",authenticateAccessToken, adminController.getAllCars);
 router.put("/cars/:id/status", authenticateAccessToken, authorizeRoles("admin"), adminController.changeStatusCarById);
 router.delete("/cars/:id", authenticateAccessToken, authorizeRoles("admin"), adminController.deleteCarById);
 router.get("/cars/:id", authenticateAccessToken, authorizeRoles("admin"), adminController.getCarById);
+router.put("/update-transaction-id/:id", authenticateAccessToken, authorizeRoles("admin"), adminController.updatePaymentTransactionId);
 
 router.get("/crane-users", authenticateAccessToken, authorizeRoles("admin"), adminController.getAllCraneUsers);
 router.put("/assign-crane-man/:carId", authenticateAccessToken, authorizeRoles("admin"), adminController.assignCraneMan);

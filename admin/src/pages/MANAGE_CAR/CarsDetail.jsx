@@ -1255,6 +1255,10 @@ export default function CarDetail() {
   const [showAssign, setShowAssign] = useState(false);
   const [actionMenuOpen, setActionMenuOpen] = useState(false);
 
+  const [txnInput, setTxnInput] = useState("");
+  const [txnEditing, setTxnEditing] = useState(false);
+  const [txnSaving, setTxnSaving] = useState(false);
+
   const openLightbox = (src, label, allImgs, idx) =>
     setLightbox({ open: true, src, label, allImgs, idx });
   const closeLightbox = () => setLightbox((prev) => ({ ...prev, open: false }));
@@ -2041,81 +2045,223 @@ export default function CarDetail() {
 
           {/* Car Details */}
           <Section title="Car Details" icon={Car}>
-  <Grid>
-    <Field label="Make" value={cd.make} />
-    <Field label="Model" value={cd.model} />
-    <Field label="Year" value={cd.manufacturingYear} />
-    <Field label="Color" value={cd.color} />
-    <Field label="Fuel Type" value={cd.fuelType} />
-    <Field label="Body Type" value={cd.bodyType} />
-    <Field label="Vehicle Class" value={cd.vehicleClass} />
-    <Field label="Seating Capacity" value={cd.seatingCapacity} />
-    <Field label="Vehicle Category" value={cd.vehicleCategory} />
-    <Field label="Variant / Norms" value={cd.variant} />
-    <Field label="Cubic Capacity" value={cd.cubicCapacity} />
-    <Field label="Cylinders" value={cd.cylinderCount} />
-    <Field label="Wheelbase" value={cd.wheelbase} />
-    <Field label="Unladen Weight" value={cd.unladenWeight} />
-    <Field label="Gross Weight" value={cd.grossWeight} />
-    <Field label="KM Driven" value={car.kmDriven ? `${Number(car.kmDriven).toLocaleString("en-IN")} km` : undefined} />
-  </Grid>
-</Section>
-
-          {/* Registration */}
-          <Section title="Registration & Documents" icon={FileText}>
-  <Grid>
-    <Field label="RC Number" value={cd.rcNumber || car.rcNumber} />
-    <Field label="RC Status" value={cd.rcStatus} />
-    <Field label="Status As On" value={cd.statusAsOn} />
-    <Field label="Registration Date" value={cd.registrationDate} />
-    <Field label="Valid Till" value={cd.registrationValidity} />
-    <Field label="Tax Valid Till" value={cd.taxValidity} />
-    <Field label="Owner Name" value={cd.ownerName} />
-    <Field label="Father's Name" value={cd.fatherName} />
-    <Field label="Owner Count" value={cd.ownerCount} />
-    <Field label="RTO Office" value={cd.rtoOffice} />
-    <Field label="RTO Code" value={cd.rtoCode} />
-    <Field label="Chassis Number" value={cd.chassisNumber} />
-    <Field label="Engine Number" value={cd.engineNumber} />
-    <Field label="Insurance Company" value={cd.insuranceCompany} />
-    <Field label="Insurance Policy No." value={cd.insurancePolicyNumber} />
-    <Field label="Insurance Valid Till" value={cd.insuranceValidity} />
-    <Field label="PUCC Number" value={cd.puccNumber} />
-    <Field label="PUC Valid Till" value={cd.puccValidity} />
-    <Field label="Financer" value={cd.financer} />
-    <Field label="Present Address" full value={cd.presentAddress} />
-    <Field label="Permanent Address" full value={cd.permanentAddress} />
-  </Grid>
-</Section>
-
-          {/* Payment */}
-          <Section title="Payment Details" icon={CreditCard}>
-            <Grid cols={2}>
+            <Grid>
+              <Field label="Make" value={cd.make} />
+              <Field label="Model" value={cd.model} />
+              <Field label="Year" value={cd.manufacturingYear} />
+              <Field label="Color" value={cd.color} />
+              <Field label="Fuel Type" value={cd.fuelType} />
+              <Field label="Body Type" value={cd.bodyType} />
+              <Field label="Vehicle Class" value={cd.vehicleClass} />
+              <Field label="Seating Capacity" value={cd.seatingCapacity} />
+              <Field label="Vehicle Category" value={cd.vehicleCategory} />
+              <Field label="Variant / Norms" value={cd.variant} />
+              <Field label="Cubic Capacity" value={cd.cubicCapacity} />
+              <Field label="Cylinders" value={cd.cylinderCount} />
+              <Field label="Wheelbase" value={cd.wheelbase} />
+              <Field label="Unladen Weight" value={cd.unladenWeight} />
+              <Field label="Gross Weight" value={cd.grossWeight} />
               <Field
-                label="Price"
+                label="KM Driven"
                 value={
-                  car.price
-                    ? `₹${Number(car.price).toLocaleString("en-IN")}`
+                  car.kmDriven
+                    ? `${Number(car.kmDriven).toLocaleString("en-IN")} km`
                     : undefined
                 }
               />
-              <Field
-                label="Payment Method"
-                value={car.paymentMethod?.toUpperCase()}
-              />
-              <Field label="UPI ID" value={car.paymentDetails?.upiId} />
-              <Field
-                label="Account Holder"
-                value={car.paymentDetails?.accountHolderName}
-              />
-              <Field
-                label="Account Number"
-                value={car.paymentDetails?.accountNumber}
-              />
-              <Field label="Bank Name" value={car.paymentDetails?.bankName} />
-              <Field label="IFSC Code" value={car.paymentDetails?.ifscCode} />
             </Grid>
           </Section>
+
+          {/* Registration */}
+          <Section title="Registration & Documents" icon={FileText}>
+            <Grid>
+              <Field label="RC Number" value={cd.rcNumber || car.rcNumber} />
+              <Field label="RC Status" value={cd.rcStatus} />
+              <Field label="Status As On" value={cd.statusAsOn} />
+              <Field label="Registration Date" value={cd.registrationDate} />
+              <Field label="Valid Till" value={cd.registrationValidity} />
+              <Field label="Tax Valid Till" value={cd.taxValidity} />
+              <Field label="Owner Name" value={cd.ownerName} />
+              <Field label="Father's Name" value={cd.fatherName} />
+              <Field label="Owner Count" value={cd.ownerCount} />
+              <Field label="RTO Office" value={cd.rtoOffice} />
+              <Field label="RTO Code" value={cd.rtoCode} />
+              <Field label="Chassis Number" value={cd.chassisNumber} />
+              <Field label="Engine Number" value={cd.engineNumber} />
+              <Field label="Insurance Company" value={cd.insuranceCompany} />
+              <Field
+                label="Insurance Policy No."
+                value={cd.insurancePolicyNumber}
+              />
+              <Field
+                label="Insurance Valid Till"
+                value={cd.insuranceValidity}
+              />
+              <Field label="PUCC Number" value={cd.puccNumber} />
+              <Field label="PUC Valid Till" value={cd.puccValidity} />
+              <Field label="Financer" value={cd.financer} />
+              <Field label="Present Address" full value={cd.presentAddress} />
+              <Field
+                label="Permanent Address"
+                full
+                value={cd.permanentAddress}
+              />
+            </Grid>
+          </Section>
+
+          {/* Payment */}
+          {/* Payment */}
+<Section title="Payment Details" icon={CreditCard}>
+  <Grid cols={2}>
+    <Field
+      label="Price"
+      value={
+        car.price
+          ? `₹${Number(car.price).toLocaleString("en-IN")}`
+          : undefined
+      }
+    />
+    <Field
+      label="Payment Method"
+      value={car.paymentMethod?.toUpperCase()}
+    />
+    <Field label="UPI ID" value={car.paymentDetails?.upiId} />
+    <Field
+      label="Account Holder"
+      value={car.paymentDetails?.accountHolderName}
+    />
+    <Field
+      label="Account Number"
+      value={car.paymentDetails?.accountNumber}
+    />
+    <Field label="Bank Name" value={car.paymentDetails?.bankName} />
+    <Field label="IFSC Code" value={car.paymentDetails?.ifscCode} />
+
+    {/* Transaction ID */}
+    <div style={{ gridColumn: "1 / -1" }}>
+      <p style={{
+        margin: 0,
+        fontSize: 10,
+        fontWeight: 700,
+        color: "#9ca3af",
+        textTransform: "uppercase",
+        letterSpacing: "0.1em",
+        marginBottom: 6,
+      }}>
+        Transaction ID
+      </p>
+
+      {txnEditing ? (
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <input
+            value={txnInput}
+            onChange={(e) => setTxnInput(e.target.value)}
+            placeholder="Enter transaction ID"
+            style={{
+              flex: 1,
+              minWidth: 0,
+              padding: "8px 12px",
+              borderRadius: 9,
+              border: "1.5px solid #bbf7d0",
+              fontSize: 13,
+              color: "#111827",
+              outline: "none",
+              fontFamily: "inherit",
+            }}
+          />
+          <button
+            disabled={txnSaving || !txnInput.trim()}
+            onClick={async () => {
+              setTxnSaving(true);
+              try {
+                await api.put(`/admin/update-transaction-id/${id}`, {
+                  paymentTransactionId: txnInput.trim(),
+                });
+                Swal.fire({
+                  icon: "success",
+                  title: "Saved!",
+                  timer: 1800,
+                  showConfirmButton: false,
+                });
+                setTxnEditing(false);
+                fetchCar();
+              } catch {
+                Swal.fire({ icon: "error", title: "Failed", text: "Could not update transaction ID." });
+              } finally {
+                setTxnSaving(false);
+              }
+            }}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 9,
+              border: "none",
+              background: txnInput.trim() && !txnSaving ? "#0f2412" : "#d1d5db",
+              color: txnInput.trim() && !txnSaving ? "#fff" : "#9ca3af",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: txnInput.trim() ? "pointer" : "not-allowed",
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              flexShrink: 0,
+            }}
+          >
+            {txnSaving ? (
+              <Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} />
+            ) : (
+              <CheckCircle size={13} />
+            )}
+            {txnSaving ? "Saving…" : "Save"}
+          </button>
+          <button
+            onClick={() => { setTxnEditing(false); setTxnInput(""); }}
+            style={{
+              padding: "8px 12px",
+              borderRadius: 9,
+              border: "1.5px solid #e5e7eb",
+              background: "#fff",
+              color: "#374151",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <p style={{ margin: 0, fontSize: 14, color: "#111827", fontWeight: 500 }}>
+            {car.paymentTransactionId || "—"}
+          </p>
+          <button
+            onClick={() => {
+              setTxnInput(car.paymentTransactionId || "");
+              setTxnEditing(true);
+            }}
+            style={{
+              padding: "5px 11px",
+              borderRadius: 7,
+              border: "1.5px solid #bbf7d0",
+              background: "#f0fdf4",
+              color: "#166534",
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+            }}
+          >
+            <RefreshCw size={11} />
+            {car.paymentTransactionId ? "Update" : "Add"}
+          </button>
+        </div>
+      )}
+    </div>
+  </Grid>
+</Section>
 
           {/* ── Live Tracking Map (non-pending status) ── */}
           {car.status !== "pending" &&

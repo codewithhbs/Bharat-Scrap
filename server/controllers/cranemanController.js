@@ -112,7 +112,7 @@ async function paymentDetailsUpdate(req, res) {
         carDetail.paymentDetails.ifscCode = ifscCode;
         carDetail.paymentDetails.bankName = bankName;
         carDetail.paymentDetails.accountHolderName = accountHolderName;
-        carDetail.isPaid = true;
+        // carDetail.isPaid = true;
 
         const id = carDetail?.seller?._id || carDetail?.seller;
         const user = await User.findById(id);

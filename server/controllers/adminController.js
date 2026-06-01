@@ -559,6 +559,32 @@ async function changeStatusCarById(req, res) {
     }
 }
 
+async function updatePaymentTransactionId(req, res) {
+    try {
+        const carId = req.params.id;
+        const { paymentTransactionId } = req.body;
+        const car = await Car.findByIdAndUpdate(carId, { paymentTransactionId, isPaid: true }, { new: true }).populate("seller").populate("craneMan");
+        if (!car) {
+            return res.status(404).json({
+                success: false,
+                message: "Car not found"
+            });
+        }
+        return res.status(200).json({
+            success: true,
+            message: "Car payment transaction id updated successfully",
+            data: car
+        })
+    } catch (error) {
+        console.log("Internal server error", error)
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        })
+    }
+}
+
 // rc details related controller
 
 async function getAllRcDetails(req, res) {
@@ -793,5 +819,6 @@ module.exports = {
     getRcDetailById,
     getAllContactMessages,
     deleteContactMessageById,
-    getAllQuoteRequests
+    getAllQuoteRequests,
+    updatePaymentTransactionId
 }

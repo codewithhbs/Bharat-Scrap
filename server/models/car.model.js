@@ -110,6 +110,10 @@ const carSchema = new mongoose.Schema(
       default: false,
     },
 
+    paymentTransactionId: {
+      type: String,
+    },
+
     // 📊 Car Details
     kmDriven: {
       type: Number,
