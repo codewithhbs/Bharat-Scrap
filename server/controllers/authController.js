@@ -9,15 +9,18 @@ const {
 const jwt = require("jsonwebtoken");
 const generateOtp = require("../utils/otpHelper");
 const sendEmail = require("../utils/SendEmail");
+const { sendOtp } = require("../utils/sendWhatsapp");
 
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "dev-refresh-secret";
+// const { sendOtp } = require("../utils/whatsapp"); // path apne hisaab se adjust karo
+
 
 async function register(req, res) {
     try {
-        console.log("i am hit")
-        const { phone, where = 'app' } = req.body;
+        console.log("i am hit");
+        const { phone, where = "app" } = req.body;
 
-        console.log("data", phone, where)
+        console.log("data", phone, where);
 
         if (!phone) {
             return res.status(400).json({
@@ -27,13 +30,11 @@ async function register(req, res) {
         }
 
         const existing = await User.findOne({
-            $or: [
-                { phone: phone }
-            ]
+            $or: [{ phone: phone }],
         });
 
         // const otp = generateOtp();
-        const otp = 123456; // testing ke liye fixed OTP
+        const otp = generateOtp(); // testing ke liye fixed OTP
         const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
         if (existing) {
@@ -41,13 +42,22 @@ async function register(req, res) {
             existing.otpExpiry = otpExpiry;
             await existing.save();
 
-            if (where === 'web') {
-                if(existing.role === 'craneMan') {
+            // WhatsApp OTP bhejo
+            const otpResult = await sendOtp(phone, otp);
+            if (!otpResult.success) {
+                return res.status(500).json({
+                    success: false,
+                    message: "Failed to send OTP via WhatsApp. Please try again.",
+                });
+            }
+
+            if (where === "web") {
+                if (existing.role === "craneMan") {
                     return res.status(403).json({
                         success: false,
                         message: "Crane operators cannot access the web dashboard",
                     });
-                }else{
+                } else {
                     return res.status(200).json({
                         success: true,
                         message: "OTP sent successfully. Please verify OTP sent to your phone.",
@@ -64,34 +74,32 @@ async function register(req, res) {
         }
 
         const user = await User.create({
-            name: 'User',
+            name: "User",
             phone: phone,
             otp: otp,
             otpExpiry: otpExpiry,
             isPhoneVerified: false,
         });
 
+        // Naye user ko bhi WhatsApp OTP bhejo
+        const otpResult = await sendOtp(phone, otp);
+        if (!otpResult.success) {
+            return res.status(500).json({
+                success: false,
+                message: "Failed to send OTP via WhatsApp. Please try again.",
+            });
+        }
+
         return res.status(201).json({
             success: true,
             message: "User registered successfully. Please verify OTP sent to your phone.",
             userId: user._id,
         });
-
-        // const accessToken = signAccessToken(safeUser);
-        // const { token: refreshToken, jti } = await signRefreshToken(user._id);
-
-        // res.status(201).json({
-        //     success: true,
-        //     user: safeUser,
-        //     sessionId: jti,
-        //     accessToken,
-        //     refreshToken
-        // });
     } catch (err) {
         console.error("Register error:", err);
         res.status(500).json({
             success: false,
-            message: "Server error during registration"
+            message: "Server error during registration",
         });
     }
 }
