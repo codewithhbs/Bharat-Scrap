@@ -193,11 +193,19 @@ async function resendOTP(req, res) {
             });
         }
         const otp = generateOtp();
-        console.log("otp", otp)
+        // console.log("otp", otp)
         const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
         user.otp = otp;
         user.otpExpiry = otpExpiry;
         await user.save();
+        // WhatsApp OTP bhejo
+        const otpResult = await sendOtp(phone, otp);
+        if (!otpResult.success) {
+            return res.status(500).json({
+                success: false,
+                message: "Failed to send OTP via WhatsApp. Please try again.",
+            });
+        }
         return res.status(200).json({
             success: true,
             message: "OTP sent successfully. Please verify OTP sent to your phone.",
