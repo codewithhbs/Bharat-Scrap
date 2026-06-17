@@ -124,6 +124,7 @@ async function verifyUser(req, res) {
         const accessToken = signAccessToken(user);
         const { token: refreshToken, jti } = await signRefreshToken(user._id);
         if (phone === 9079036042 && otp === 123456) {
+            console.log("Test user logged in");
             user.otp = null;
             user.otpExpiry = null;
             user.isPhoneVerified = true;
@@ -137,7 +138,9 @@ async function verifyUser(req, res) {
                 refreshToken
             });
         }
+        console.log("out")
         if (user.otp !== Number(otp) || user.otpExpiry < new Date()) {
+            console.log("Invalid OTP attempt for phone:", phone);
             return res.status(400).json({
                 success: false,
                 message: "Invalid OTP",
