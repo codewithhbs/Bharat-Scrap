@@ -519,7 +519,7 @@ export default function RcDetails() {
           <Section title="Owner Information" icon={User}>
             <Grid>
               <Field label="Owner Name" value={car.ownerName} />
-              <Field label="Father's Name" value={car.fatherName} />
+              {/* <Field label="Father's Name" value={car.fatherName} /> */}
               <Field label="Owner Count" value={car.ownerCount} />
               <Field label="Present Address" value={car.presentAddress} full />
               <Field

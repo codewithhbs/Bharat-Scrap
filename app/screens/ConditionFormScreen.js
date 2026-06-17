@@ -64,6 +64,7 @@ function ImageSlot({ label, icon, uri, onPress }) {
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 export default function ConditionFormScreen({ route, navigation }) {
   const { carData, rcNumber } = route.params || {};
+  console.log("carData",carData)
 
   const [km, setKm] = useState(45000);
   const [scratches, setScratches] = useState(false);
@@ -75,6 +76,7 @@ export default function ConditionFormScreen({ route, navigation }) {
   const [pickupAddress, setPickupAddress] = useState('');
   const [pickupLatLng, setPickupLatLng] = useState({ latitude: null, longitude: null, placeId: null });
   const [streetAndHouse, setStreetAndHouse] = useState('');
+  const [priceUserWant, setPriceUserWant] = useState('');
 
   // 6 separate image states
   const [images, setImages] = useState({
@@ -121,8 +123,7 @@ export default function ConditionFormScreen({ route, navigation }) {
   const handleSubmit = async () => {
     if (!rcNumber) { showToast('RC Number not found'); return; }
 
-    // At least front image required
-    if (!images.frontImage) {
+    if (!images.frontImage && !images.backImage && !images.chassisImage && !images.engineImage && !images.tyreImage && !images.odometerImage) {
       Alert.alert('Photo Required', 'Please upload at least the front photo of your car.');
       return;
     }
@@ -136,6 +137,11 @@ export default function ConditionFormScreen({ route, navigation }) {
       Alert.alert('Address Required', 'Please enter your house number and street.');
       return;
     }
+
+    if (!priceUserWant.trim() || isNaN(Number(priceUserWant))) {
+  Alert.alert('Price Required', 'Please enter the price you want for your car.');
+  return;
+}
 
     setLoading(true);
     try {
@@ -159,6 +165,7 @@ export default function ConditionFormScreen({ route, navigation }) {
       formData.append('isAccident', accidents.toString());
       formData.append('isRunningCondition', isRunningCondition.toString());
       formData.append('anyMissingPart', anyMissingPart.toString());
+      formData.append('priceUserWant', priceUserWant.toString());
       // Validation - location zaroori hai
       if (!pickupAddress || !pickupLatLng.latitude) {
         Alert.alert('Location Required', 'Please search and select your pickup location.');
@@ -184,10 +191,16 @@ export default function ConditionFormScreen({ route, navigation }) {
 
       if (res.data?.success) {
         showToast('Car details updated successfully!');
-        navigation.navigate('PriceResult', {
-          carDetail: res.data.data || carData,
+        // navigation.navigate('PriceResult', {
+        //   carDetail: res.data.data || carData,
+        //   rcNumber,
+        //   buttonText: 'pending',
+        // });
+
+        navigation.navigate('Success', {
           rcNumber,
-          buttonText: 'pending',
+          carDetail: res.data.data || carData,
+          message: "Your car is now live for sale!"
         });
       } else {
         showToast(res.data?.message || 'Update failed');
@@ -334,6 +347,29 @@ export default function ConditionFormScreen({ route, navigation }) {
           ))}
         </View>
 
+        {/* ── Price User Want ── */}
+<View style={styles.section}>
+  <Text style={styles.sectionTitle}>Your Expected Price</Text>
+  <Text style={styles.photoHint}>Enter the amount you want for your car (in ₹)</Text>
+  <View style={styles.priceInputWrapper}>
+    <Text style={styles.pricePrefix}>₹</Text>
+    <TextInput
+      style={styles.priceInput}
+      placeholder="e.g. 150000"
+      placeholderTextColor={Colors.neutral400}
+      value={priceUserWant}
+      onChangeText={(val) => setPriceUserWant(val.replace(/[^0-9]/g, ''))}
+      keyboardType="numeric"
+      maxLength={10}
+    />
+  </View>
+  {priceUserWant ? (
+    <Text style={styles.priceFormatted}>
+      ₹ {Number(priceUserWant).toLocaleString('en-IN')}
+    </Text>
+  ) : null}
+</View>
+
         {/* ── Car Photos ── */}
         <View style={styles.section}>
           <View style={styles.photoHeader}>
@@ -362,7 +398,8 @@ export default function ConditionFormScreen({ route, navigation }) {
           disabled={loading}
         >
           <Text style={styles.btnPrimaryText}>
-            {loading ? 'Updating...' : 'Calculate Price'}
+            {/* {loading ? 'Updating...' : 'Calculate Price'} */}
+            {loading ? 'Listing...' : 'List My Car'}
           </Text>
           {!loading && (
             <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
@@ -485,4 +522,32 @@ const styles = StyleSheet.create({
     color: Colors.neutral500,
     fontFamily: 'monospace',
   },
+  priceInputWrapper: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  borderWidth: 1,
+  borderColor: Colors.neutral200,
+  borderRadius: 10,
+  backgroundColor: Colors.neutral50,
+  paddingHorizontal: 14,
+},
+pricePrefix: {
+  fontSize: 16,
+  fontWeight: '700',
+  color: Colors.blue700,
+  marginRight: 6,
+},
+priceInput: {
+  flex: 1,
+  paddingVertical: 10,
+  fontSize: 15,
+  color: Colors.neutral900,
+  fontWeight: '600',
+},
+priceFormatted: {
+  fontSize: 13,
+  color: Colors.blue500,
+  fontWeight: '600',
+  marginTop: -4,
+},
 });

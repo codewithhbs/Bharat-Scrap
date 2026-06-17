@@ -52,6 +52,7 @@ router.put("/cars/:id/status", authenticateAccessToken, authorizeRoles("admin"),
 router.delete("/cars/:id", authenticateAccessToken, authorizeRoles("admin"), adminController.deleteCarById);
 router.get("/cars/:id", authenticateAccessToken, authorizeRoles("admin"), adminController.getCarById);
 router.put("/update-transaction-id/:id", authenticateAccessToken, authorizeRoles("admin"), adminController.updatePaymentTransactionId);
+router.put("/update-admin-price/:id", authenticateAccessToken, authorizeRoles("admin"), adminController.updateAdminPrice);
 
 router.get("/crane-users", authenticateAccessToken, authorizeRoles("admin"), adminController.getAllCraneUsers);
 router.put("/assign-crane-man/:carId", authenticateAccessToken, authorizeRoles("admin"), adminController.assignCraneMan);

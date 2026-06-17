@@ -62,5 +62,7 @@ router.put("/approve-car-for-sale/:rcNumber", authenticateAccessToken, carContro
 router.get("/car-details-for-me", authenticateAccessToken, carController.fetchCarDetailForMe);
 router.get("/get-car-detail-by-id/:carId", authenticateAccessToken, carController.fetchCarDetailById);
 router.get("/test-rc-detail/:rcNumber", carController.testRcDetail);
+router.put("/update-assigned-to-crane-man-status/:carId", authenticateAccessToken, carController.UpdateAssignedToCraneManStatus);
+router.put("/price-accepted-by-user/:carId", authenticateAccessToken, carController.priceAcceptedByUser);
 
 module.exports = router;

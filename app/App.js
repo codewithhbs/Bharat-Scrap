@@ -19,6 +19,7 @@ import PriceResultScreen from './screens/PriceResultScreen';
 import SuccessScreen from './screens/SuccessScreen.js';
 import ProfileUpdateScreen from './screens/ProfileUpdateScreen.js';
 import SoldCarDetailScreen from './screens/SoldCarDetailScreen.js';
+import * as Notifications from 'expo-notifications';
 
 import { Colors } from './constants/colors';
 import { isLoggedIn } from './lib/api.js';
@@ -28,6 +29,17 @@ import { navigationRef } from './lib/navigationRef';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+
+Notifications.setNotificationHandler({
+  handleNotification: async (notification) => {
+    console.log('🚨 handleNotification called:', notification); // pehle confirm karo yeh hit ho raha hai
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    };
+  },
+});
 
 function HomeIcon({ color, size }) {
   return (

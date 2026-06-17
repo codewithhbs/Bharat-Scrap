@@ -246,78 +246,78 @@ function NavigationMapModal({ visible, job, onClose }) {
 
     // Android permission
     // Replace requestAndroidPermission:
-const requestPermission = async () => {
-    const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
-    return status === 'granted';
-};
+    const requestPermission = async () => {
+        const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
+        return status === 'granted';
+    };
 
-// Replace startWatch entirely:
-const startWatch = async () => {
-    const hasPermission = await requestPermission();
-    if (!hasPermission) {
-        setLocationError('Location permission denied');
-        return;
-    }
-
-    // Fast one-time fix first
-    try {
-        const pos = await ExpoLocation.getCurrentPositionAsync({
-            accuracy: ExpoLocation.Accuracy.Balanced,
-        });
-        const coords = {
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-        };
-        setCraneLocation(coords);
-        if (pickupCoords) {
-            setDistance(getDistanceKm(
-                coords.latitude, coords.longitude,
-                pickupCoords.latitude, pickupCoords.longitude
-            ));
-            fetchRoute(coords, pickupCoords);
+    // Replace startWatch entirely:
+    const startWatch = async () => {
+        const hasPermission = await requestPermission();
+        if (!hasPermission) {
+            setLocationError('Location permission denied');
+            return;
         }
-    } catch (e) {
-        setLocationError('Location unavailable: ' + e.message);
-    }
 
-    // Then live watch
-    const sub = await ExpoLocation.watchPositionAsync(
-        {
-            accuracy: ExpoLocation.Accuracy.Balanced,
-            distanceInterval: 10,
-            timeInterval: 5000,
-        },
-        (pos) => {
-            const updated = {
+        // Fast one-time fix first
+        try {
+            const pos = await ExpoLocation.getCurrentPositionAsync({
+                accuracy: ExpoLocation.Accuracy.Balanced,
+            });
+            const coords = {
                 latitude: pos.coords.latitude,
                 longitude: pos.coords.longitude,
             };
-            setCraneLocation(updated);
+            setCraneLocation(coords);
             if (pickupCoords) {
                 setDistance(getDistanceKm(
-                    updated.latitude, updated.longitude,
+                    coords.latitude, coords.longitude,
                     pickupCoords.latitude, pickupCoords.longitude
                 ));
-                const prevCoords = prevCraneRef.current;
-                const moved = prevCoords
-                    ? getDistanceKm(prevCoords.latitude, prevCoords.longitude, updated.latitude, updated.longitude)
-                    : 1;
-                if (moved > 0.1) {
-                    fetchRoute(updated, pickupCoords);
-                    prevCraneRef.current = updated;
+                fetchRoute(coords, pickupCoords);
+            }
+        } catch (e) {
+            setLocationError('Location unavailable: ' + e.message);
+        }
+
+        // Then live watch
+        const sub = await ExpoLocation.watchPositionAsync(
+            {
+                accuracy: ExpoLocation.Accuracy.Balanced,
+                distanceInterval: 10,
+                timeInterval: 5000,
+            },
+            (pos) => {
+                const updated = {
+                    latitude: pos.coords.latitude,
+                    longitude: pos.coords.longitude,
+                };
+                setCraneLocation(updated);
+                if (pickupCoords) {
+                    setDistance(getDistanceKm(
+                        updated.latitude, updated.longitude,
+                        pickupCoords.latitude, pickupCoords.longitude
+                    ));
+                    const prevCoords = prevCraneRef.current;
+                    const moved = prevCoords
+                        ? getDistanceKm(prevCoords.latitude, prevCoords.longitude, updated.latitude, updated.longitude)
+                        : 1;
+                    if (moved > 0.1) {
+                        fetchRoute(updated, pickupCoords);
+                        prevCraneRef.current = updated;
+                    }
                 }
             }
-        }
-    );
-    watchId.current = sub;
-};
+        );
+        watchId.current = sub;
+    };
 
     const stopWatch = () => {
-    if (watchId.current !== null) {
-        watchId.current.remove(); // expo-location uses .remove() not clearWatch
-        watchId.current = null;
-    }
-};
+        if (watchId.current !== null) {
+            watchId.current.remove(); // expo-location uses .remove() not clearWatch
+            watchId.current = null;
+        }
+    };
 
     const fetchRoute = async (origin, destination) => {
         try {
@@ -1226,7 +1226,7 @@ const ji = StyleSheet.create({
 // ═══════════════════════════════════════════════════════════════════════════════
 // ─── MAIN SCREEN ──────────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
-export default function CraneManHome() {
+export default function CraneManHome({ onRefreshTrigger = 0 }) {
     const navigation = useNavigation();
     const [user, setUser] = useState({});
     const [jobs, setJobs] = useState([]);
@@ -1247,8 +1247,11 @@ export default function CraneManHome() {
         if (isRefresh) setRefresh(true); else setLoading(true);
         try {
             const res = await api.get('/api/car/car-details-for-me');
-            if (res.data?.success) setJobs(res.data.data || []);
-            else toast(res.data?.message || 'Failed to load jobs');
+            if (res.data?.success) {
+                setJobs(res.data.data || []);
+            } else {
+                toast(res.data?.message || 'Failed to load jobs');
+            }
         } catch { toast('Something went wrong. Please try again.'); }
         finally { setLoading(false); setRefresh(false); }
     }, []);
@@ -1288,6 +1291,10 @@ export default function CraneManHome() {
         if (h < 17) return 'Good Afternoon 👋';
         return 'Good Evening 🌙';
     };
+
+    useEffect(() => {
+        if (onRefreshTrigger > 0) fetchJobs();
+    }, [onRefreshTrigger]);
 
     return (
         <View style={scr.root}>

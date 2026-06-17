@@ -10,6 +10,7 @@ import {
     FlatList,
     Dimensions,
     ActivityIndicator,
+    Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -514,6 +515,7 @@ export default function SoldCarDetailScreen({ route, navigation }) {
     const [loading, setLoading] = useState(true);
     const [isUser, setIsUser] = useState(false);
     const [scrollEnabled, setScrollEnabled] = useState(true);
+    const [acceptingPrice, setAcceptingPrice] = useState(false);
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
     const fetchCarDetail = async () => {
@@ -533,6 +535,69 @@ export default function SoldCarDetailScreen({ route, navigation }) {
     };
 
     useEffect(() => { fetchCarDetail(); }, []);
+
+    const handleAcceptPrice = async () => {
+        Alert.alert(
+            'Accept Price?',
+            `Are you sure you want to accept ₹ ${carDetail?.price?.toLocaleString('en-IN')} as the final price for your car?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Yes, Accept',
+                    style: 'default',
+                    onPress: async () => {
+                        setAcceptingPrice(true);
+                        try {
+                            const res = await api.put(`/api/car/price-accepted-by-user/${carDetail._id}`, {
+                                userAgreedForPrice: "accepted",
+                            });
+                            if (res.data?.success) {
+                                setCarDetail(prev => ({ ...prev, userAgreedForPrice: "accepted" }));
+                            } else {
+                                Alert.alert('Error', res.data?.message || 'Something went wrong.');
+                            }
+                        } catch (err) {
+                            console.log('Accept price error:', err.message);
+                            Alert.alert('Error', 'Failed to accept price. Please try again.');
+                        } finally {
+                            setAcceptingPrice(false);
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    const handleRejectPrice = async () => {
+        Alert.alert(
+            'Reject Price?',
+            `Are you sure you want to reject ₹ ${carDetail?.price?.toLocaleString('en-IN')}?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Yes, Reject',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setAcceptingPrice(true);
+                        try {
+                            const res = await api.put(`/api/car/price-accepted-by-user/${carDetail._id}`, {
+                                userAgreedForPrice: "rejected",
+                            });
+                            if (res.data?.success) {
+                                setCarDetail(prev => ({ ...prev, userAgreedForPrice: "rejected" }));
+                            } else {
+                                Alert.alert('Error', res.data?.message || 'Something went wrong.');
+                            }
+                        } catch (err) {
+                            Alert.alert('Error', 'Failed to reject price. Please try again.');
+                        } finally {
+                            setAcceptingPrice(false);
+                        }
+                    },
+                },
+            ]
+        );
+    };
 
     if (loading) {
         return (
@@ -560,7 +625,8 @@ export default function SoldCarDetailScreen({ route, navigation }) {
         anyMissingPart, isPaid, paymentMethod, paymentDetails,
         images, frontImage, backImage, chassisImage, engineImage,
         tyreImage, odometerImage, rcFrontImage, rcBackImage,
-        price, createdAt, updatedAt,
+        price, priceUserWant, userAgreedForPrice,   // ← add these two
+        createdAt, updatedAt,
     } = carDetail;
 
     const craneManCoords = craneMan?.location?.latitude ? {
@@ -770,7 +836,26 @@ export default function SoldCarDetailScreen({ route, navigation }) {
                 <Section title="Payment Details" icon={<PaymentIcon color="#2563EB" />}>
                     <BoolRow label="Payment Done" value={isPaid} />
                     {paymentMethod && <InfoRow label="Payment Method" value={paymentMethod === 'upi' ? 'UPI' : 'Bank Transfer'} />}
-                    {price && <InfoRow label="Price" value={`₹ ${price.toLocaleString()}`} />}
+                    {/* User's Expected Price */}
+                    {carDetail.priceUserWant && (
+                        <InfoRow label="User Expected Price" value={`₹ ${carDetail.priceUserWant.toLocaleString('en-IN')}`} />
+                    )}
+
+                    {/* Final Price or Pending Notice */}
+                    {carDetail.price ? (
+                        <InfoRow label="Final Price" value={`₹ ${carDetail.price.toLocaleString('en-IN')}`} />
+                    ) : (
+                        <View style={styles.priceNoticeCard}>
+                            <Text style={styles.priceNoticeIcon}>⏳</Text>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.priceNoticeTitle}>Price Under Review</Text>
+                                <Text style={styles.priceNoticeText}>
+                                    Our admin is reviewing your listing and will confirm the final price shortly. You'll be notified once it's approved.
+                                </Text>
+                            </View>
+                        </View>
+                    )}
+                    {carDetail.price && <InfoRow label="User Agreed For Price" value={carDetail.userAgreedForPrice} />}
                     {paymentDetails?.upiId && <InfoRow label="UPI ID" value={paymentDetails.upiId} />}
                     {paymentDetails?.accountHolderName && <InfoRow label="Account Holder" value={paymentDetails.accountHolderName} />}
                     {paymentDetails?.bankName && <InfoRow label="Bank Name" value={paymentDetails.bankName} />}
@@ -804,7 +889,37 @@ export default function SoldCarDetailScreen({ route, navigation }) {
                     {updatedAt && <InfoRow label="Last Updated" value={new Date(updatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} />}
                 </Section>
 
-                <View style={{ height: 40 }} />
+                <View style={{ height: price && userAgreedForPrice === "pending" && isUser ? 100 : 40 }} />
+                {isUser && price && userAgreedForPrice === "pending" && (
+                    <View style={styles.acceptPriceBar}>
+                        <View style={styles.acceptPriceLeft}>
+                            <Text style={styles.acceptPriceLabel}>Admin's Offer</Text>
+                            <Text style={styles.acceptPriceAmount}>₹ {price.toLocaleString('en-IN')}</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', gap: 10 }}>
+                            <TouchableOpacity
+                                style={[styles.rejectPriceBtn, acceptingPrice && { opacity: 0.7 }]}
+                                onPress={handleRejectPrice}
+                                disabled={acceptingPrice}
+                                activeOpacity={0.85}
+                            >
+                                <Text style={styles.rejectPriceBtnText}>Reject</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.acceptPriceBtn, acceptingPrice && { opacity: 0.7 }]}
+                                onPress={handleAcceptPrice}
+                                disabled={acceptingPrice}
+                                activeOpacity={0.85}
+                            >
+                                {acceptingPrice ? (
+                                    <ActivityIndicator color="#fff" size="small" />
+                                ) : (
+                                    <Text style={styles.acceptPriceBtnText}>Accept</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                )}
             </Animated.ScrollView>
         </SafeAreaView>
     );
@@ -947,4 +1062,99 @@ const styles = StyleSheet.create({
     thumbContainer: { width: (SCREEN_WIDTH - 32 - 16 * 2 - 10 * 2) / 3, alignItems: 'center', gap: 5 },
     thumbImage: { width: '100%', aspectRatio: 1, borderRadius: 10, backgroundColor: '#E5E7EB' },
     thumbLabel: { fontSize: 11, color: '#6B7280', fontWeight: '500', textAlign: 'center' },
+    priceNoticeCard: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 10,
+        backgroundColor: '#FFFBEB',
+        borderWidth: 1,
+        borderColor: '#FDE68A',
+        borderRadius: 12,
+        padding: 14,
+        marginTop: 8,
+    },
+    priceNoticeIcon: {
+        fontSize: 20,
+        marginTop: 1,
+    },
+    priceNoticeTitle: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#92400E',
+        marginBottom: 3,
+    },
+    priceNoticeText: {
+        fontSize: 12,
+        color: '#78350F',
+        lineHeight: 18,
+    },
+    acceptPriceBar: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 14,
+        paddingBottom: 28,
+        backgroundColor: '#fff',
+        borderTopWidth: 1,
+        borderTopColor: '#E5E7EB',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 12,
+    },
+    acceptPriceLeft: {
+        gap: 2,
+    },
+    acceptPriceLabel: {
+        fontSize: 11,
+        color: '#6B7280',
+        fontWeight: '500',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    acceptPriceAmount: {
+        fontSize: 22,
+        fontWeight: '800',
+        color: '#111827',
+        letterSpacing: -0.5,
+    },
+    acceptPriceBtn: {
+        backgroundColor: '#16a34a',
+        paddingHorizontal: 24,
+        paddingVertical: 13,
+        borderRadius: 12,
+        shadowColor: '#16a34a',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
+        minWidth: 130,
+        alignItems: 'center',
+    },
+    acceptPriceBtnText: {
+        color: '#fff',
+        fontSize: 15,
+        fontWeight: '700',
+    },
+    rejectPriceBtn: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#ef4444',
+    minWidth: 90,
+    alignItems: 'center',
+},
+rejectPriceBtnText: {
+    color: '#ef4444',
+    fontSize: 15,
+    fontWeight: '700',
+},
 });

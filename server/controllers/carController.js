@@ -28,18 +28,33 @@ async function carRegister(req, res) {
         // Check if RC number already exists
         const checkRc = await Car.findOne({ rcNumber });
         if (checkRc) {
-            return res.status(200).json({
-                success: true,
-                message: "RC number already exists",
-                data: checkRc.carDetail
-            })
-            // return res.status(400).json({
-            //     success: false,
-            //     message: "RC number already exists"
-            // });
+            if (checkRc.status === "sold") {
+                return res.status(400).json({
+                    success: false,
+                    message: "RC number already exists and car is sold"
+                });
+            } else {
+                return res.status(200).json({
+                    success: true,
+                    message: "RC number already exists",
+                    data: checkRc.carDetail,
+                    id: checkRc._id
+                })
+            }
         }
 
         const carDetailWithRC = await getCarDetailsFromRC(rcNumber);
+
+        // ✅ Ye block add karo — agar koi bhi critical field null ho
+        const cd = carDetailWithRC.carData;
+        const hasData = cd.make || cd.model || cd.ownerName || cd.chassisNumber || cd.engineNumber;
+
+        if (!hasData) {
+            return res.status(422).json({
+                success: false,
+                message: "Could not fetch vehicle details for this RC number. Please verify the RC number and try again."
+            });
+        }
 
         const carData = {
             seller: userId,
@@ -108,16 +123,51 @@ async function carDetailUpdate(req, res) {
         const {
             kmDriven, isScrateched, isAccident,
             isRunningCondition, anyMissingPart,
-            // ── NEW: pickup location fields ──
             pickupAddress,
             pickupStreetAndHouse,
             pickupLatitude,
             pickupLongitude,
             pickupPlaceId,
+            priceUserWant
         } = req.body;
 
         if (!userId) {
             return res.status(401).json({ success: false, message: "Unauthorized" });
+        }
+
+        // ── Validate required text fields ──
+        const missingFields = [];
+        if (kmDriven === undefined || kmDriven === null || kmDriven === "") missingFields.push("kmDriven");
+        if (isScrateched === undefined || isScrateched === null || isScrateched === "") missingFields.push("isScrateched");
+        if (isAccident === undefined || isAccident === null || isAccident === "") missingFields.push("isAccident");
+        if (isRunningCondition === undefined || isRunningCondition === null || isRunningCondition === "") missingFields.push("isRunningCondition");
+        if (anyMissingPart === undefined || anyMissingPart === null || anyMissingPart === "") missingFields.push("anyMissingPart");
+        if (!pickupAddress) missingFields.push("pickupAddress");
+        if (!pickupStreetAndHouse) missingFields.push("pickupStreetAndHouse");
+        if (!pickupLatitude) missingFields.push("pickupLatitude");
+        if (!pickupLongitude) missingFields.push("pickupLongitude");
+        if (!pickupPlaceId) missingFields.push("pickupPlaceId");
+        if (priceUserWant === undefined || priceUserWant === null || priceUserWant === "") missingFields.push("priceUserWant");
+
+        if (missingFields.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `Missing required fields: ${missingFields.join(", ")}`,
+            });
+        }
+
+        // ── Validate required image fields ──
+        const requiredImages = [
+            "frontImage", "backImage", "chassisImage",
+            "engineImage", "tyreImage", "odometerImage",
+        ];
+        const missingImages = requiredImages.filter(field => !req.files?.[field]);
+
+        if (missingImages.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `Missing required images: ${missingImages.join(", ")}`,
+            });
         }
 
         const carDetail = await Car.findOne({ rcNumber });
@@ -125,36 +175,28 @@ async function carDetailUpdate(req, res) {
             return res.status(404).json({ success: false, message: "Car not found" });
         }
 
-        const fileFields = [
-            "frontImage", "backImage", "chassisImage",
-            "engineImage", "tyreImage", "odometerImage",
-        ];
-
         await Promise.all(
-            fileFields.map(async (field) => {
-                if (req.files?.[field]) {
-                    const uploaded = await uploadImage(req.files[field][0].buffer);
-                    carDetail[field] = {
-                        image: uploaded.image,
-                        public_id: uploaded.public_id,
-                    };
-                }
+            requiredImages.map(async (field) => {
+                const uploaded = await uploadImage(req.files[field][0].buffer);
+                carDetail[field] = {
+                    image: uploaded.image,
+                    public_id: uploaded.public_id,
+                };
             })
         );
 
-        // Existing fields
         carDetail.kmDriven = kmDriven;
         carDetail.isScrateched = isScrateched;
         carDetail.isAccident = isAccident;
         carDetail.isRunningCondition = isRunningCondition;
         carDetail.anyMissingPart = anyMissingPart;
+        carDetail.priceUserWant = priceUserWant;
 
-        // ── NEW: Pickup location object ──
         carDetail.pickupLocation = {
             address: pickupAddress,
             streetAndHouse: pickupStreetAndHouse,
-            latitude: pickupLatitude ? parseFloat(pickupLatitude) : undefined,
-            longitude: pickupLongitude ? parseFloat(pickupLongitude) : undefined,
+            latitude: parseFloat(pickupLatitude),
+            longitude: parseFloat(pickupLongitude),
             placeId: pickupPlaceId,
         };
 
@@ -214,6 +256,7 @@ async function fetchCarDetailForMe(req, res) {
     try {
         const userId = req.user?.sub;
         const role = req.user?.role;
+
         if (!userId) {
             return res.status(401).json({
                 success: false,
@@ -221,30 +264,38 @@ async function fetchCarDetailForMe(req, res) {
             });
         }
 
-        // const carDetails = await Car.find({ seller: userId });
-
-        // const filterForSell = carDetails.filter(car => car.onlyForCheck === false);
-
         let carDetails;
-        if (role === "user") {
-            carDetails = await Car.find({ seller: userId }).populate("craneMan").populate("seller");
-        } else {
-            carDetails = await Car.find({ craneMan: userId }).populate("craneMan").populate("seller");
-        }
 
-        const filterForSell = carDetails.filter(car => car.onlyForCheck === false);
+        if (role === "user") {
+            carDetails = await Car.find({
+                seller: userId,
+                onlyForCheck: false
+            })
+                .populate("craneMan")
+                .populate("seller");
+        } else {
+            carDetails = await Car.find({
+                craneMan: userId,
+                craneManAssignStatus: "accepted",
+                onlyForCheck: false
+            })
+                .populate("craneMan")
+                .populate("seller");
+        }
 
         return res.status(200).json({
             success: true,
             message: "Car details fetched successfully",
-            data: filterForSell
-        })
+            data: carDetails
+        });
+
     } catch (error) {
-        console.log("Internal server error", error)
+        console.error("Internal server error:", error);
+
         return res.status(500).json({
             success: false,
             message: "Internal server error"
-        })
+        });
     }
 }
 
@@ -303,11 +354,84 @@ async function testRcDetail(req, res) {
     }
 }
 
+async function UpdateAssignedToCraneManStatus(req, res) {
+    try {
+        const userId = req.user?.sub;
+        const { carId } = req.params;
+        const { status } = req.body;
+        console.log("status", status)
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+        const carDetail = await Car.findById(carId);
+        if (!carDetail) {
+            return res.status(404).json({
+                success: false,
+                message: "Car not found"
+            });
+        }
+
+        carDetail.craneManAssignStatus = status;
+        await carDetail.save();
+        return res.status(200).json({
+            success: true,
+            message: "Car assigned to crane man successfully",
+            data: carDetail
+        })
+    } catch (error) {
+        console.log("Internal server error", error)
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        })
+    }
+}
+
+async function priceAcceptedByUser(req, res) {
+    try {
+        const userId = req.user?.sub;
+        const { carId } = req.params;
+        const { userAgreedForPrice } = req.body;
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized"
+            });
+        }
+        const carDetail = await Car.findById(carId);
+        if (!carDetail) {
+            return res.status(404).json({
+                success: false,
+                message: "Car not found"
+            });
+        }
+
+        carDetail.userAgreedForPrice = userAgreedForPrice;
+        await carDetail.save();
+        return res.status(200).json({
+            success: true,
+            message: "Car assigned to crane man successfully",
+            data: carDetail
+        })
+    } catch (error) {
+        console.log("Internal server error", error)
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error"
+        })
+    }
+}
+
 module.exports = {
     carRegister,
     carDetailUpdate,
     approveForCarSale,
     fetchCarDetailForMe,
     fetchCarDetailById,
-    testRcDetail
+    testRcDetail,
+    UpdateAssignedToCraneManStatus,
+    priceAcceptedByUser
 };

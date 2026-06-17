@@ -1,5 +1,6 @@
 const User = require("../models/user.model");
 const admin = require("../config/firebase");
+const Notification = require("../models/Notification");
 
 exports.saveToken = async (req, res) => {
     try {
@@ -102,5 +103,39 @@ exports.sendMultipleNotification = async (req, res) => {
             message: "Internal server error",
             error: error.message
         })
+    }
+}
+
+exports.unreadNotifications = async (req, res) => {
+    try {
+        const notifications = await Notification.find({
+            userId: req.user?.sub,
+            isRead: false,
+        }).sort({ createdAt: -1 });
+
+        return res.status(200).json({ success: true, notifications });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+}
+
+exports.markAsRead = async (req, res) => {
+    try {
+        await Notification.findByIdAndUpdate(req.params.id, { isRead: true });
+        return res.status(200).json({ success: true });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+}
+
+exports.markAsReadAll = async (req, res) => {
+    try {
+        await Notification.updateMany(
+            { userId: req.user._id, isRead: false },
+            { isRead: true }
+        );
+        return res.status(200).json({ success: true });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
     }
 }

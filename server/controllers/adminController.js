@@ -3,6 +3,8 @@ const { signAccessToken, signRefreshToken } = require("../utils/jwtUtil");
 const Car = require("../models/car.model");
 const RCDetail = require("../models/rcDetail.model");
 const Contact = require("../models/contact.model");
+const admin = require("../config/firebase");
+const Notification = require("../models/Notification");
 
 // admin login 
 async function adminLogin(req, res) {
@@ -72,33 +74,33 @@ async function adminLogin(req, res) {
 async function getAllUsers(req, res) {
     try {
         const {
-            search    = "",
+            search = "",
             isBlocked = "",
-            page      = 1,
-            limit     = 10,
+            page = 1,
+            limit = 10,
         } = req.query;
 
         // ── Build filter ──────────────────────────────────────────
         const filter = { role: "user" };
 
         // isBlocked
-        if (isBlocked === "true")  filter.isBlocked = true;
+        if (isBlocked === "true") filter.isBlocked = true;
         if (isBlocked === "false") filter.isBlocked = false;
 
         // search — name, email, phone, address
         if (search.trim()) {
             filter.$or = [
-                { name:    { $regex: search.trim(), $options: "i" } },
-                { email:   { $regex: search.trim(), $options: "i" } },
-                { phone:   { $regex: search.trim(), $options: "i" } },
+                { name: { $regex: search.trim(), $options: "i" } },
+                { email: { $regex: search.trim(), $options: "i" } },
+                { phone: { $regex: search.trim(), $options: "i" } },
                 { address: { $regex: search.trim(), $options: "i" } },
             ];
         }
 
         // ── Pagination ────────────────────────────────────────────
-        const pageNum  = Math.max(1, parseInt(page));
+        const pageNum = Math.max(1, parseInt(page));
         const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
-        const skip     = (pageNum - 1) * limitNum;
+        const skip = (pageNum - 1) * limitNum;
 
         // ── Query ─────────────────────────────────────────────────
         const [users, total] = await Promise.all([
@@ -111,12 +113,12 @@ async function getAllUsers(req, res) {
         ]);
 
         return res.status(200).json({
-            success:    true,
-            message:    "Users retrieved successfully",
-            data:       users,
+            success: true,
+            message: "Users retrieved successfully",
+            data: users,
             total,
-            page:       pageNum,
-            limit:      limitNum,
+            page: pageNum,
+            limit: limitNum,
             totalPages: Math.ceil(total / limitNum),
         });
 
@@ -125,7 +127,7 @@ async function getAllUsers(req, res) {
         return res.status(500).json({
             success: false,
             message: "Internal server error",
-            error:   error.message,
+            error: error.message,
         });
     }
 }
@@ -238,28 +240,156 @@ async function assignCraneMan(req, res) {
     try {
         const { carId } = req.params;
         const { craneManId, inseptionDate } = req.body;
-        const car = await Car.findById(carId);
+
+        // Car fetch — seller bhi populate karo contact ke liye
+        const car = await Car.findById(carId)
+            .populate('seller', 'name phone');
+
         if (!car) {
-            return res.status(404).json({
-                success: false,
-                message: "Car not found"
-            });
+            return res.status(404).json({ success: false, message: "Car not found" });
         }
+
+        // CraneMan fetch — uska FCM token chahiye
+        const craneMan = await User.findById(craneManId).select('name fcmToken');
+        if (!craneMan) {
+            return res.status(404).json({ success: false, message: "Crane man not found" });
+        }
+
+        if (!car.price) {
+            return res.status(400).json({ success: false, message: "Price is not set for this car yet" });
+        }
+
+        if (car.userAgreedForPrice === "pending") {
+            return res.status(400).json({ success: false, message: "User has not agreed to the price yet" });
+        }
+
+        if (car.userAgreedForPrice === "rejected") {
+            return res.status(400).json({ success: false, message: "User has rejected the price" });
+        }
+
+        // Assign karo
         car.craneMan = craneManId;
+        car.craneManAssignStatus = 'pending';
         car.inseptionDate = inseptionDate;
         await car.save();
+
+        // ── Pickup location extract karo ──
+        const loc = car.pickupLocation || {};
+
+        const pickupLat = String(loc.latitude || '');
+        const pickupLng = String(loc.longitude || '');
+        const pickupAddress = [loc.streetAndHouse, loc.address]
+            .filter(Boolean)
+            .join(', ');
+        // Result: "Zakir kaloni, Meerut, Uttar Pradesh, India"
+
+        if (loc.coordinates?.length === 2) {
+            // GeoJSON format: [lng, lat]
+            pickupLng = String(loc.coordinates[0]);
+            pickupLat = String(loc.coordinates[1]);
+        } else if (loc.lat && loc.lng) {
+            // Simple object format
+            pickupLat = String(loc.lat);
+            pickupLng = String(loc.lng);
+        }
+
+        console.log("craneMan.fcmToken", craneMan.fcmToken)
+
+        // ── Notification bhejo ──
+        if (craneMan.fcmToken) {
+            const message = {
+                token: craneMan.fcmToken,
+                notification: {
+                    title: '🚗 New Booking Received!',
+                    body: `${car.carDetail?.make || ''} ${car.carDetail?.model || ''} — ${pickupAddress || 'View location'}`.trim(),
+                },
+                data: {
+                    screen: 'BookingRequest',
+                    carId: car._id.toString(),
+                    // Car details
+                    carName: `${car.carDetail?.make || ''} ${car.carDetail?.model || ''}`.trim(),
+                    carVariant: car.carDetail?.variant || '',
+                    rcNumber: car.rcNumber || '',
+                    fuelType: car.carDetail?.fuelType || '',
+                    color: car.carDetail?.color || '',
+                    kmDriven: String(car.kmDriven || ''),
+                    price: String(car.price || ''),
+                    // Seller details
+                    sellerName: car.seller?.name || '',
+                    sellerPhone: car.seller?.phone || '',
+                    // Pickup
+                    pickupLat,
+                    pickupLng,
+                    pickupAddress,
+                    // Meta
+                    inseptionDate: inseptionDate || '',
+                    paymentMethod: car.paymentMethod || '',
+                },
+                android: {
+                    priority: 'high',
+                    notification: {
+                        sound: 'default',
+                        channelId: 'default',
+                    },
+                },
+                // ✅ Yeh add karo
+                apns: {
+                    payload: {
+                        aps: {
+                            contentAvailable: true,
+                        },
+                    },
+                },
+            };
+
+            try {
+                await admin.messaging().send(message);
+                console.log('✅ Notification sent to:', craneMan.name);
+            } catch (notifErr) {
+                console.log('⚠️ Notification failed:', notifErr.message);
+                // Assignment fail nahi hogi notification ke karan
+            }
+        } else {
+            console.log('⚠️ CraneMan ka FCM token nahi mila — ID:', craneManId);
+        }
+
+        await Notification.create({
+            userId: craneManId,
+            title: '🚗 New Booking Received!',
+            body: `${car.carDetail?.make || ''} ${car.carDetail?.model || ''} — ${pickupAddress || 'View location'}`.trim(),
+            data: {
+                screen: 'BookingRequest',
+                carId: car._id.toString(),
+                carName: `${car.carDetail?.make || ''} ${car.carDetail?.model || ''}`.trim(),
+                carVariant: car.carDetail?.variant || '',
+                rcNumber: car.rcNumber || '',
+                fuelType: car.carDetail?.fuelType || '',
+                color: car.carDetail?.color || '',
+                kmDriven: String(car.kmDriven || ''),
+                price: String(car.price || ''),
+                sellerName: car.seller?.name || '',
+                sellerPhone: car.seller?.phone || '',
+                pickupLat,
+                pickupLng,
+                pickupAddress,
+                inseptionDate: inseptionDate || '',
+                paymentMethod: car.paymentMethod || '',
+            },
+        });
+
         return res.status(200).json({
             success: true,
             message: "Crane man assigned successfully",
-            data: car
-        })
+            data: car,
+        });
+
     } catch (error) {
-        console.log("Internal server error", error)
+        console.log("Internal server error", error);
         return res.status(500).json({
             success: false,
             message: "Internal server error",
-            error: error.message
-        })
+            error: error.message,
+        });
     }
 }
 
@@ -293,33 +423,33 @@ async function createCraneMan(req, res) {
 async function getAllCraneUsers(req, res) {
     try {
         const {
-            search    = "",
+            search = "",
             isBlocked = "",
-            page      = 1,
-            limit     = 10,
+            page = 1,
+            limit = 10,
         } = req.query;
 
         // ── Build filter ──────────────────────────────────────────
         const filter = { role: "craneMan" };
 
         // isBlocked
-        if (isBlocked === "true")  filter.isBlocked = true;
+        if (isBlocked === "true") filter.isBlocked = true;
         if (isBlocked === "false") filter.isBlocked = false;
 
         // search — name, email, phone, address
         if (search.trim()) {
             filter.$or = [
-                { name:    { $regex: search.trim(), $options: "i" } },
-                { email:   { $regex: search.trim(), $options: "i" } },
-                { phone:   { $regex: search.trim(), $options: "i" } },
+                { name: { $regex: search.trim(), $options: "i" } },
+                { email: { $regex: search.trim(), $options: "i" } },
+                { phone: { $regex: search.trim(), $options: "i" } },
                 { address: { $regex: search.trim(), $options: "i" } },
             ];
         }
 
         // ── Pagination ────────────────────────────────────────────
-        const pageNum  = Math.max(1, parseInt(page));
+        const pageNum = Math.max(1, parseInt(page));
         const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
-        const skip     = (pageNum - 1) * limitNum;
+        const skip = (pageNum - 1) * limitNum;
 
         // ── Query ─────────────────────────────────────────────────
         const [users, total] = await Promise.all([
@@ -332,12 +462,12 @@ async function getAllCraneUsers(req, res) {
         ]);
 
         return res.status(200).json({
-            success:    true,
-            message:    "Crane men retrieved successfully",
-            data:       users,
+            success: true,
+            message: "Crane men retrieved successfully",
+            data: users,
             total,
-            page:       pageNum,
-            limit:      limitNum,
+            page: pageNum,
+            limit: limitNum,
             totalPages: Math.ceil(total / limitNum),
         });
 
@@ -346,7 +476,7 @@ async function getAllCraneUsers(req, res) {
         return res.status(500).json({
             success: false,
             message: "Internal server error",
-            error:   error.message,
+            error: error.message,
         });
     }
 }
@@ -573,6 +703,32 @@ async function updatePaymentTransactionId(req, res) {
         return res.status(200).json({
             success: true,
             message: "Car payment transaction id updated successfully",
+            data: car
+        })
+    } catch (error) {
+        console.log("Internal server error", error)
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message
+        })
+    }
+}
+
+async function updateAdminPrice(req, res) {
+    try {
+        const carId = req.params.id;
+        const { price } = req.body;
+        const car = await Car.findByIdAndUpdate(carId, { price, userAgreedForPrice: 'pending' }, { new: true }).populate("seller").populate("craneMan");
+        if (!car) {
+            return res.status(404).json({
+                success: false,
+                message: "Car not found"
+            });
+        }
+        return res.status(200).json({
+            success: true,
+            message: "Car price updated successfully",
             data: car
         })
     } catch (error) {
@@ -820,5 +976,6 @@ module.exports = {
     getAllContactMessages,
     deleteContactMessageById,
     getAllQuoteRequests,
-    updatePaymentTransactionId
+    updatePaymentTransactionId,
+    updateAdminPrice
 }

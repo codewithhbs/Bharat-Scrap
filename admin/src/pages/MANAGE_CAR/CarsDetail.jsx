@@ -245,11 +245,11 @@ function AssignCraneManModal({
         timer: 2000,
         showConfirmButton: false,
       });
-    } catch {
+    } catch (error) {
       Swal.fire({
         icon: "error",
         title: "Failed",
-        text: "Could not assign crane man.",
+        text: error.message || "Could not assign crane man."
       });
     } finally {
       setAssigning(false);
@@ -1259,6 +1259,12 @@ export default function CarDetail() {
   const [txnEditing, setTxnEditing] = useState(false);
   const [txnSaving, setTxnSaving] = useState(false);
 
+  const [priceInput, setPriceInput] = useState("");
+  const [priceEditing, setPriceEditing] = useState(false);
+  const [priceSaving, setPriceSaving] = useState(false);
+
+  // console.log("car",car)
+
   const openLightbox = (src, label, allImgs, idx) =>
     setLightbox({ open: true, src, label, allImgs, idx });
   const closeLightbox = () => setLightbox((prev) => ({ ...prev, open: false }));
@@ -1298,7 +1304,6 @@ export default function CarDetail() {
     try {
       setLoading(true);
       const res = await api.get(`/admin/cars/${id}`);
-      console.log("res.data.data", res.data.data);
       if (res.data.success) setCar(res.data.data);
     } catch (err) {
       console.error(err);
@@ -2082,7 +2087,7 @@ export default function CarDetail() {
               <Field label="Valid Till" value={cd.registrationValidity} />
               <Field label="Tax Valid Till" value={cd.taxValidity} />
               <Field label="Owner Name" value={cd.ownerName} />
-              <Field label="Father's Name" value={cd.fatherName} />
+              {/* <Field label="Father's Name" value={cd.fatherName} /> */}
               <Field label="Owner Count" value={cd.ownerCount} />
               <Field label="RTO Office" value={cd.rtoOffice} />
               <Field label="RTO Code" value={cd.rtoCode} />
@@ -2110,158 +2115,404 @@ export default function CarDetail() {
           </Section>
 
           {/* Payment */}
-          {/* Payment */}
-<Section title="Payment Details" icon={CreditCard}>
-  <Grid cols={2}>
-    <Field
-      label="Price"
-      value={
-        car.price
-          ? `₹${Number(car.price).toLocaleString("en-IN")}`
-          : undefined
-      }
-    />
-    <Field
-      label="Payment Method"
-      value={car.paymentMethod?.toUpperCase()}
-    />
-    <Field label="UPI ID" value={car.paymentDetails?.upiId} />
-    <Field
-      label="Account Holder"
-      value={car.paymentDetails?.accountHolderName}
-    />
-    <Field
-      label="Account Number"
-      value={car.paymentDetails?.accountNumber}
-    />
-    <Field label="Bank Name" value={car.paymentDetails?.bankName} />
-    <Field label="IFSC Code" value={car.paymentDetails?.ifscCode} />
+          <Section title="Payment Details" icon={CreditCard}>
+            <Grid cols={2}>
+              <Field
+                label="User Price Expectation"
+                value={
+                  car.priceUserWant
+                    ? `₹${Number(car.priceUserWant).toLocaleString("en-IN")}`
+                    : undefined
+                }
+              />
+              {/* Admin Price */}
+              <div style={{ gridColumn: "1 / -1" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#9ca3af",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                    marginBottom: 6,
+                  }}
+                >
+                  Admin Offer Price
+                </p>
 
-    {/* Transaction ID */}
-    <div style={{ gridColumn: "1 / -1" }}>
-      <p style={{
-        margin: 0,
-        fontSize: 10,
-        fontWeight: 700,
-        color: "#9ca3af",
-        textTransform: "uppercase",
-        letterSpacing: "0.1em",
-        marginBottom: 6,
-      }}>
-        Transaction ID
-      </p>
+                {priceEditing ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+                      <span
+                        style={{
+                          position: "absolute",
+                          left: 10,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          fontSize: 13,
+                          color: "#6b7280",
+                          fontWeight: 600,
+                        }}
+                      >
+                        ₹
+                      </span>
+                      <input
+                        type="number"
+                        value={priceInput}
+                        onChange={(e) => setPriceInput(e.target.value)}
+                        placeholder="Enter offer price"
+                        style={{
+                          width: "100%",
+                          paddingLeft: 24,
+                          paddingRight: 12,
+                          paddingTop: 8,
+                          paddingBottom: 8,
+                          borderRadius: 9,
+                          border: "1.5px solid #bbf7d0",
+                          fontSize: 13,
+                          color: "#111827",
+                          outline: "none",
+                          fontFamily: "inherit",
+                          boxSizing: "border-box",
+                        }}
+                      />
+                    </div>
+                    <button
+                      disabled={priceSaving || !priceInput}
+                      onClick={async () => {
+                        setPriceSaving(true);
+                        try {
+                          await api.put(`/admin/update-admin-price/${id}`, {
+                            price: Number(priceInput),
+                          });
+                          Swal.fire({
+                            icon: "success",
+                            title: "Price Set!",
+                            timer: 1800,
+                            showConfirmButton: false,
+                          });
+                          setPriceEditing(false);
+                          fetchCar();
+                        } catch {
+                          Swal.fire({
+                            icon: "error",
+                            title: "Failed",
+                            text: "Could not update price.",
+                          });
+                        } finally {
+                          setPriceSaving(false);
+                        }
+                      }}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: 9,
+                        border: "none",
+                        background:
+                          priceInput && !priceSaving ? "#0f2412" : "#d1d5db",
+                        color: priceInput && !priceSaving ? "#fff" : "#9ca3af",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: priceInput ? "pointer" : "not-allowed",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {priceSaving ? (
+                        <Loader2
+                          size={13}
+                          style={{ animation: "spin 0.8s linear infinite" }}
+                        />
+                      ) : (
+                        <CheckCircle size={13} />
+                      )}
+                      {priceSaving ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setPriceEditing(false);
+                        setPriceInput("");
+                      }}
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: 9,
+                        border: "1.5px solid #e5e7eb",
+                        background: "#fff",
+                        color: "#374151",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        flexShrink: 0,
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 10 }}
+                  >
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 14,
+                        color: "#111827",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {car.price
+                        ? `₹${Number(car.price).toLocaleString("en-IN")}`
+                        : "—"}
+                    </p>
+                    {/* userAgreedForPrice badge */}
+                    {car.price && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          padding: "2px 9px",
+                          borderRadius: 99,
+                          ...(car.userAgreedForPrice === "accepted"
+                            ? {
+                                background: "#dcfce7",
+                                color: "#166534",
+                                border: "1px solid #bbf7d0",
+                              }
+                            : car.userAgreedForPrice === "rejected"
+                              ? {
+                                  background: "#fee2e2",
+                                  color: "#991b1b",
+                                  border: "1px solid #fecaca",
+                                }
+                              : {
+                                  background: "#fef9c3",
+                                  color: "#854d0e",
+                                  border: "1px solid #fde047",
+                                }),
+                        }}
+                      >
+                        {car.userAgreedForPrice === "accepted"
+                          ? "✓ Accepted"
+                          : car.userAgreedForPrice === "rejected"
+                            ? "✕ Rejected"
+                            : "⏳ Pending"}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => {
+                        setPriceInput(car.price ? String(car.price) : "");
+                        setPriceEditing(true);
+                      }}
+                      style={{
+                        padding: "5px 11px",
+                        borderRadius: 7,
+                        border: "1.5px solid #bbf7d0",
+                        background: "#f0fdf4",
+                        color: "#166534",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                      }}
+                    >
+                      <RefreshCw size={11} />
+                      {car.price ? "Update" : "Set Price"}
+                    </button>
+                  </div>
+                )}
+              </div>
+              <Field
+                label="Payment Method"
+                value={car.paymentMethod?.toUpperCase()}
+              />
+              {car.paymentDetails?.upiId && (
+                <Field label="UPI ID" value={car.paymentDetails?.upiId} />
+              )}
+              {car.paymentDetails?.accountHolderName && (
+                <Field
+                  label="Account Holder"
+                  value={car.paymentDetails?.accountHolderName}
+                />
+              )}
+              {car.paymentDetails?.accountNumber && (
+                <Field
+                  label="Account Number"
+                  value={car.paymentDetails?.accountNumber}
+                />
+              )}
+              {car.paymentDetails?.bankName && (
+                <Field label="Bank Name" value={car.paymentDetails?.bankName} />
+              )}
+              {car.paymentDetails?.ifscCode && (
+                <Field label="IFSC Code" value={car.paymentDetails?.ifscCode} />
+              )}
 
-      {txnEditing ? (
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <input
-            value={txnInput}
-            onChange={(e) => setTxnInput(e.target.value)}
-            placeholder="Enter transaction ID"
-            style={{
-              flex: 1,
-              minWidth: 0,
-              padding: "8px 12px",
-              borderRadius: 9,
-              border: "1.5px solid #bbf7d0",
-              fontSize: 13,
-              color: "#111827",
-              outline: "none",
-              fontFamily: "inherit",
-            }}
-          />
-          <button
-            disabled={txnSaving || !txnInput.trim()}
-            onClick={async () => {
-              setTxnSaving(true);
-              try {
-                await api.put(`/admin/update-transaction-id/${id}`, {
-                  paymentTransactionId: txnInput.trim(),
-                });
-                Swal.fire({
-                  icon: "success",
-                  title: "Saved!",
-                  timer: 1800,
-                  showConfirmButton: false,
-                });
-                setTxnEditing(false);
-                fetchCar();
-              } catch {
-                Swal.fire({ icon: "error", title: "Failed", text: "Could not update transaction ID." });
-              } finally {
-                setTxnSaving(false);
-              }
-            }}
-            style={{
-              padding: "8px 14px",
-              borderRadius: 9,
-              border: "none",
-              background: txnInput.trim() && !txnSaving ? "#0f2412" : "#d1d5db",
-              color: txnInput.trim() && !txnSaving ? "#fff" : "#9ca3af",
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: txnInput.trim() ? "pointer" : "not-allowed",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              flexShrink: 0,
-            }}
-          >
-            {txnSaving ? (
-              <Loader2 size={13} style={{ animation: "spin 0.8s linear infinite" }} />
-            ) : (
-              <CheckCircle size={13} />
-            )}
-            {txnSaving ? "Saving…" : "Save"}
-          </button>
-          <button
-            onClick={() => { setTxnEditing(false); setTxnInput(""); }}
-            style={{
-              padding: "8px 12px",
-              borderRadius: 9,
-              border: "1.5px solid #e5e7eb",
-              background: "#fff",
-              color: "#374151",
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: "pointer",
-              flexShrink: 0,
-            }}
-          >
-            Cancel
-          </button>
-        </div>
-      ) : (
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <p style={{ margin: 0, fontSize: 14, color: "#111827", fontWeight: 500 }}>
-            {car.paymentTransactionId || "—"}
-          </p>
-          <button
-            onClick={() => {
-              setTxnInput(car.paymentTransactionId || "");
-              setTxnEditing(true);
-            }}
-            style={{
-              padding: "5px 11px",
-              borderRadius: 7,
-              border: "1.5px solid #bbf7d0",
-              background: "#f0fdf4",
-              color: "#166534",
-              fontSize: 11,
-              fontWeight: 600,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-            }}
-          >
-            <RefreshCw size={11} />
-            {car.paymentTransactionId ? "Update" : "Add"}
-          </button>
-        </div>
-      )}
-    </div>
-  </Grid>
-</Section>
+              {/* Transaction ID */}
+              <div style={{ gridColumn: "1 / -1" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#9ca3af",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                    marginBottom: 6,
+                  }}
+                >
+                  Transaction ID
+                </p>
+
+                {txnEditing ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <input
+                      value={txnInput}
+                      onChange={(e) => setTxnInput(e.target.value)}
+                      placeholder="Enter transaction ID"
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        padding: "8px 12px",
+                        borderRadius: 9,
+                        border: "1.5px solid #bbf7d0",
+                        fontSize: 13,
+                        color: "#111827",
+                        outline: "none",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                    <button
+                      disabled={txnSaving || !txnInput.trim()}
+                      onClick={async () => {
+                        setTxnSaving(true);
+                        try {
+                          await api.put(`/admin/update-transaction-id/${id}`, {
+                            paymentTransactionId: txnInput.trim(),
+                          });
+                          Swal.fire({
+                            icon: "success",
+                            title: "Saved!",
+                            timer: 1800,
+                            showConfirmButton: false,
+                          });
+                          setTxnEditing(false);
+                          fetchCar();
+                        } catch {
+                          Swal.fire({
+                            icon: "error",
+                            title: "Failed",
+                            text: "Could not update transaction ID.",
+                          });
+                        } finally {
+                          setTxnSaving(false);
+                        }
+                      }}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: 9,
+                        border: "none",
+                        background:
+                          txnInput.trim() && !txnSaving ? "#0f2412" : "#d1d5db",
+                        color:
+                          txnInput.trim() && !txnSaving ? "#fff" : "#9ca3af",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: txnInput.trim() ? "pointer" : "not-allowed",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {txnSaving ? (
+                        <Loader2
+                          size={13}
+                          style={{ animation: "spin 0.8s linear infinite" }}
+                        />
+                      ) : (
+                        <CheckCircle size={13} />
+                      )}
+                      {txnSaving ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setTxnEditing(false);
+                        setTxnInput("");
+                      }}
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: 9,
+                        border: "1.5px solid #e5e7eb",
+                        background: "#fff",
+                        color: "#374151",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        flexShrink: 0,
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 10 }}
+                  >
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 14,
+                        color: "#111827",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {car.paymentTransactionId || "—"}
+                    </p>
+                    <button
+                      onClick={() => {
+                        setTxnInput(car.paymentTransactionId || "");
+                        setTxnEditing(true);
+                      }}
+                      style={{
+                        padding: "5px 11px",
+                        borderRadius: 7,
+                        border: "1.5px solid #bbf7d0",
+                        background: "#f0fdf4",
+                        color: "#166534",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 5,
+                      }}
+                    >
+                      <RefreshCw size={11} />
+                      {car.paymentTransactionId ? "Update" : "Add"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </Grid>
+          </Section>
 
           {/* ── Live Tracking Map (non-pending status) ── */}
           {car.status !== "pending" &&
@@ -2619,6 +2870,11 @@ export default function CarDetail() {
                 {craneManObj.upiDetails?.upiId && (
                   <p style={{ margin: 0, fontSize: 12, color: "#9ca3af" }}>
                     UPI: {craneManObj.upiDetails.upiId}
+                  </p>
+                )}
+                {car?.craneManAssignStatus && (
+                  <p style={{ margin: 0, fontSize: 12, color: "#9ca3af" }}>
+                    Crane Man Assign Status: {car.craneManAssignStatus}
                   </p>
                 )}
                 <button

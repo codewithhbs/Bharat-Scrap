@@ -1,17 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
 import { Platform } from 'react-native';
-
-// ✅ Notification handler
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
 
 export default function usePushNotification() {
   const [expoPushToken, setExpoPushToken] = useState('');
@@ -20,13 +10,11 @@ export default function usePushNotification() {
   const responseListener = useRef();
 
   async function registerForPushNotificationsAsync() {
-    // ✅ Physical device check
     if (!Device.isDevice) {
       alert('Must use physical device for Push Notifications');
       return null;
     }
 
-    // ✅ Permission check
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
@@ -40,20 +28,6 @@ export default function usePushNotification() {
       return null;
     }
 
-    // ✅ Token fetch
-    // const projectId =
-    //   Constants.expoConfig?.extra?.eas?.projectId ??
-    //   Constants.easConfig?.projectId;
-
-    // if (!projectId) {
-    //   console.error('❌ Missing EAS project ID in app.json.');
-    //   return null;
-    // }
-
-    // const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-    const tokenData = await Notifications.getDevicePushTokenAsync();
-
-    // ✅ Android channel setup
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'default',
@@ -63,38 +37,46 @@ export default function usePushNotification() {
       });
     }
 
-    return tokenData.data; // ✅ Sirf token string return karo, pura object nahi
+    const tokenData = await Notifications.getDevicePushTokenAsync();
+    return tokenData.data;
   }
 
   useEffect(() => {
-    // Token register karo
+    // ✅ CHANGE 1 — channel setup async karo pehle, phir token
+    const setup = async () => {
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF231F7C',
+        });
+      }
+    };
+    setup();
+
     registerForPushNotificationsAsync()
       .then(token => {
         if (token) {
           setExpoPushToken(token);
-          console.log('✅ Expo Push Token:', token);
+          console.log('✅ FCM Token:', token);
         }
       })
       .catch(err => console.error('Token fetch error:', err));
 
-    // Notification aane par
     notificationListener.current =
-      Notifications.addNotificationReceivedListener(notification => {
-        console.log('🔔 Notification received:', notification);
-        setNotification(notification);
+      Notifications.addNotificationReceivedListener(notif => {
+        console.log('🔔 Foreground notification received:', notif);
+        // ✅ CHANGE 2 — naya object wrap karo taaki same notification dobara trigger ho sake
+        setNotification({ notif, timestamp: Date.now() });
       });
 
-    // User ne notification tap ki
     responseListener.current =
       Notifications.addNotificationResponseReceivedListener(response => {
-        console.log('👆 Notification tapped:', response);
-        // Yahan navigation logic daal sakte ho agar chahiye
+        console.log('👆 Notification tapped (hook):', response);
       });
 
-    // Cleanup
     return () => {
-      // Notifications.removeNotificationSubscription(notificationListener.current);
-      // Notifications.removeNotificationSubscription(responseListener.current);
       notificationListener.current?.remove();
       responseListener.current?.remove();
     };

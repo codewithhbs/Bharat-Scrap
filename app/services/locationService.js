@@ -56,7 +56,7 @@ export const startLocationTracking = async () => {
     }
 
     // Battery optimization bypass — pehli baar user se maango
-    await requestBatteryOptimizationExemption();
+    // await requestBatteryOptimizationExemption();
 
     const token = await getAccessToken();
 

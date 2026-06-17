@@ -155,7 +155,6 @@ export default function RCInputScreen({ route, navigation }) {
 
       if (data.success) {
         showToast('Car details fetched successfully!');
-        console.log("data",data)
 
         navigation.navigate('CarDetails', {
           carData: data.data,
@@ -168,12 +167,15 @@ export default function RCInputScreen({ route, navigation }) {
     } catch (error) {
       console.log("RC Register Error:", error);
 
-      const errorMsg = error.response?.data?.message || 'Something went wrong. Please try again.';
+      const status = error.response?.status;
+      const msg = error.response?.data?.message || 'Something went wrong. Please try again.';
 
-      if (error.response?.status === 400) {
-        setRcError(error.response?.data?.message || 'RC number already exists');
+      if (status === 400) {
+        setRcError(msg); // RC already exists
+      } else if (status === 422) {
+        setRcError(msg); // No data from RC API — inline dikhao
       } else {
-        showToast(errorMsg);
+        showToast(msg);  // Network/server errors — toast mein
       }
     } finally {
       setLoading(false);

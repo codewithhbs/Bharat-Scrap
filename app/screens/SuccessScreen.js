@@ -13,6 +13,7 @@ import { Colors } from '../constants/colors';
 
 export default function SuccessScreen({ route, navigation }) {
   const { rcNumber, carDetail, message } = route.params || {};
+  console.log("carDetail in SuccessScreen", carDetail);
 
   const scaleAnim = useRef(new Animated.Value(0.5)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -35,7 +36,7 @@ export default function SuccessScreen({ route, navigation }) {
 
   // Dynamic car name
   const carName = carDetail 
-    ? `${carDetail.make || ''} ${carDetail.model || ''}`.trim() || 'Your Car'
+    ? `${carDetail?.carDetail?.make || ''} ${carDetail?.carDetail?.model || ''}`.trim() || 'Your Car'
     : 'Your Car';
 
   // Dynamic order details
@@ -48,9 +49,13 @@ export default function SuccessScreen({ route, navigation }) {
       label: 'RC Number', 
       value: rcNumber || carDetail?.rcNumber || 'N/A' 
     },
+    // { 
+    //   label: 'Estimated Price', 
+    //   value: '₹3,20,000 – ₹3,50,000'   // Aap isko dynamic bana sakte ho baad mein
+    // },
     { 
-      label: 'Estimated Price', 
-      value: '₹3,20,000 – ₹3,50,000'   // Aap isko dynamic bana sakte ho baad mein
+      label: 'Your Price', 
+      value: carDetail?.priceUserWant || 'N/A'   // Aap isko dynamic bana sakte ho baad mein
     },
     { 
       label: 'Status', 
@@ -99,6 +104,17 @@ export default function SuccessScreen({ route, navigation }) {
             </View>
           ))}
         </View>
+
+        {/* Pricing Notice */}
+<View style={styles.noticeCard}>
+  <Text style={styles.noticeIcon}>⏳</Text>
+  <View style={{ flex: 1 }}>
+    <Text style={styles.noticeTitle}>Pricing Pending Review</Text>
+    <Text style={styles.noticeText}>
+      Our team is reviewing your listing. You'll receive a final price from the admin within 24–48 hours.
+    </Text>
+  </View>
+</View>
 
         {/* Action Buttons */}
         <TouchableOpacity
@@ -224,4 +240,31 @@ const styles = StyleSheet.create({
     fontSize: 11, 
     color: Colors.neutral400 
   },
+  noticeCard: {
+  width: '100%',
+  flexDirection: 'row',
+  alignItems: 'flex-start',
+  gap: 12,
+  backgroundColor: '#FFFBEB',
+  borderWidth: 1,
+  borderColor: '#FDE68A',
+  borderRadius: 14,
+  padding: 16,
+  marginBottom: 24,
+},
+noticeIcon: {
+  fontSize: 22,
+  marginTop: 1,
+},
+noticeTitle: {
+  fontSize: 13,
+  fontWeight: '700',
+  color: '#92400E',
+  marginBottom: 4,
+},
+noticeText: {
+  fontSize: 12,
+  color: '#78350F',
+  lineHeight: 18,
+},
 });

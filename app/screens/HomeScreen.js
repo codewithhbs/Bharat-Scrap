@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View,
   Text,
   StyleSheet,
   ActivityIndicator,
@@ -13,126 +12,178 @@ import api from '../lib/api';
 import UserHome from '../components/UserHome';
 import CraneManHome from '../components/CraneManHome';
 import NotificationToast from '../components/NotificationToast';
+import BookingRequestModal from '../components/BookingRequestModal';
 import usePushNotification from '../hooks/userPushNotification';
-import { startLocationService, stopLocationService } from '../services/locationService';
-
-// ✅ App.js se nahi, alag file se import — circular dependency FIX
 import { navigationRef } from '../lib/navigationRef';
+import useNotificationPolling from '../hooks/useNotificationPolling';
 
-function handleNotificationNavigation(data = {}) {
-  if (!navigationRef.current?.isReady()) return;
-  const screen = data?.screen;
-  if (screen) {
-    const { screen: _, ...params } = data;
-    navigationRef.current.navigate(screen, params);
-  } else {
-    navigationRef.current.navigate('MainTabs');
-  }
-}
+export default function HomeScreen() {
+  const [user, setUser] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-export default function HomeScreen({ navigation }) {
-  const [user, setUser]             = useState({});
-  const [loading, setLoading]       = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [bookingModal, setBookingModal] = useState({
+    visible: false,
+    data: {},
+  });
+
+  const [toast, setToast] = useState({
+    visible: false,
+    title: '',
+    body: '',
+    data: {},
+  });
+
+  // ✅ Already handled notification IDs track karo — modal dobara nahi khulega
+  const handledNotificationIds = useRef(new Set());
 
   const { expoPushToken, notification } = usePushNotification();
 
-  const [toast, setToast] = useState({
-    visible: false, title: '', body: '', data: {},
-  });
-
-  const showToast = (title, body, data = {}) =>
+  const showToast = (title, body, data = {}) => {
     setToast({ visible: true, title, body, data });
+  };
 
-  const hideToast = () =>
+  const hideToast = () => {
     setToast(prev => ({ ...prev, visible: false }));
+  };
 
-  // ─────────────────────────────────────────
-  // Notification — CASE 1: App band thi
-  // ─────────────────────────────────────────
-  useEffect(() => {
-    const checkInitialNotification = async () => {
-      const response = await Notifications.getLastNotificationResponseAsync();
-      if (response) {
-        const data = response.notification.request.content.data || {};
-        setTimeout(() => handleNotificationNavigation(data), 1000);
+  const handleNotificationNavigation = useCallback((data = {}, notificationId = null) => {
+    if (!data) return;
+
+    // ✅ Duplicate check — same notification dobara process nahi hogi
+    if (notificationId) {
+      if (handledNotificationIds.current.has(notificationId)) {
+        console.log('⏭️ Already handled, skipping:', notificationId);
+        return;
       }
-    };
-    checkInitialNotification();
-  }, []);
+      handledNotificationIds.current.add(notificationId);
+    }
 
-  // ─────────────────────────────────────────
-  // Notification — CASE 2: App background mein
-  // ─────────────────────────────────────────
-  useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
-      const { data } = response.notification.request.content;
-      handleNotificationNavigation(data || {});
-    });
-    return () => subscription.remove();
-  }, []);
+    if (data.screen === 'BookingRequest') {
+      setBookingModal({ visible: true, data });
+      setRefreshTrigger(prev => prev + 1);
+      return;
+    }
 
-  // ─────────────────────────────────────────
-  // Notification — CASE 3: App foreground mein
-  // ─────────────────────────────────────────
-  useEffect(() => {
-    if (!notification) return;
-    const { title, body, data } = notification.request.content;
-    showToast(title, body, data || {});
-  }, [notification]);
+    if (!navigationRef.current?.isReady()) return;
 
-  // ─────────────────────────────────────────
-  // FCM Token save
-  // ─────────────────────────────────────────
-  useEffect(() => {
-    if (!expoPushToken) return;
-    const saveToken = async () => {
-      try {
-        const res = await api.post('/api/notification/save-token', {
-          token: expoPushToken,
-        });
-        console.log('✅ FCM Token saved:', res.data.message);
-      } catch (err) {
-        console.log('⚠️ Token save failed:', err?.response?.data?.message || err.message);
-      }
-    };
-    saveToken();
-  }, [expoPushToken]);
-
-  // ─────────────────────────────────────────
-  // User fetch
-  // ─────────────────────────────────────────
-  const handleFetchUser = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    try {
-      const res = await api.get('/api/auth/me');
-      if (res.data?.success) setUser(res.data.user || {});
-    } catch (e) {
-      console.log('User fetch error:', e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+    const screen = data.screen;
+    if (screen) {
+      const { screen: _, ...params } = data;
+      navigationRef.current.navigate(screen, params);
     }
   }, []);
 
-  useEffect(() => { handleFetchUser(); }, []);
+  // Save FCM token
+  useEffect(() => {
+    if (!expoPushToken) return;
 
-  // ─────────────────────────────────────────
-  // Location service — user load hone pe start
-  // ─────────────────────────────────────────
-  // useEffect(() => {
-  //   if (!user?._id) return;
+    const saveToken = async () => {
+      try {
+        await api.post('/api/notification/save-token', { token: expoPushToken });
+        console.log('✅ FCM token saved');
+      } catch (err) {
+        console.log('❌ Token save failed:', err?.response?.data?.message || err.message);
+      }
+    };
 
-  //   startLocationService().then(success => {
-  //     if (success) console.log('📍 Location service started');
-  //     else console.log('⚠️ Location service start nahi hua');
-  //   });
+    saveToken();
+  }, [expoPushToken]);
 
-  //   return () => {
-  //     stopLocationService();
-  //   };
-  // }, [user?._id]);
+  // Foreground notifications
+  useEffect(() => {
+    if (!notification) return;
+
+    const { title, body, data } = notification.notif.request.content;
+    const notificationId = notification.notif.request.identifier;
+
+    console.log('🔔 Foreground Notification:', data);
+
+    showToast(title, body, data || {});
+    setRefreshTrigger(prev => prev + 1);
+
+    if (data?.screen === 'BookingRequest') {
+      // ✅ Foreground modal ke liye bhi duplicate check
+      if (!handledNotificationIds.current.has(notificationId)) {
+        handledNotificationIds.current.add(notificationId);
+        setBookingModal({ visible: true, data });
+      }
+    }
+  }, [notification]);
+
+  // Notification tapped (app background/foreground)
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data || {};
+      const notificationId = response.notification.request.identifier;
+
+      console.log('👆 Notification Click:', data);
+
+      handleNotificationNavigation(data, notificationId);
+    });
+
+    return () => subscription.remove();
+  }, [handleNotificationNavigation]);
+
+  // App cold start — last notification check
+  useEffect(() => {
+    const checkInitialNotification = async () => {
+      const response = await Notifications.getLastNotificationResponseAsync();
+      if (!response) return;
+
+      const data = response.notification.request.content.data || {};
+      const notificationId = response.notification.request.identifier;
+
+      setTimeout(() => {
+        handleNotificationNavigation(data, notificationId);
+      }, 500);
+    };
+
+    checkInitialNotification();
+  }, [handleNotificationNavigation]);
+
+  const handleNewNotification = useCallback((notif) => {
+    const { title, body, data } = notif;
+
+    console.log('📬 Polled notification:', data);
+
+    // Toast dikhao
+    showToast(title, body, data || {});
+
+    // Refresh karo
+    setRefreshTrigger(prev => prev + 1);
+
+    // BookingRequest modal
+    if (data?.screen === 'BookingRequest') {
+      if (!handledNotificationIds.current.has(notif._id)) {
+        handledNotificationIds.current.add(notif._id);
+        setBookingModal({ visible: true, data });
+      }
+    }
+  }, []);
+
+  useNotificationPolling({
+    onNewNotification: handleNewNotification,
+    interval: 5000,
+  });
+
+  const fetchUser = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/api/auth/me');
+      if (res.data?.success) {
+        setUser(res.data.user || {});
+      }
+    } catch (error) {
+      console.log('User fetch error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
 
   if (loading) {
     return (
@@ -147,7 +198,11 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <>
-      {role === 'user' ? <UserHome /> : <CraneManHome />}
+      {role === 'user' ? (
+        <UserHome refreshTrigger={refreshTrigger} />
+      ) : (
+        <CraneManHome refreshTrigger={refreshTrigger} />
+      )}
 
       <NotificationToast
         visible={toast.visible}
@@ -155,6 +210,16 @@ export default function HomeScreen({ navigation }) {
         body={toast.body}
         onHide={hideToast}
         onPress={() => handleNotificationNavigation(toast.data)}
+      />
+
+      <BookingRequestModal
+        visible={bookingModal.visible}
+        data={bookingModal.data}
+        onClose={() => setBookingModal({ visible: false, data: {} })}
+        onSuccess={() => {
+          setBookingModal({ visible: false, data: {} });
+          setRefreshTrigger(prev => prev + 1);
+        }}
       />
     </>
   );

@@ -14,6 +14,22 @@ const carSchema = new mongoose.Schema(
       ref: "User",
     },
 
+    craneManAssignStatus: {
+      type: String,
+      enum: ["pending", "accepted", "rejected"],
+      default: "pending",
+    },
+
+    priceUserWant: {
+      type: Number,
+    },
+
+    userAgreedForPrice: {
+      type: String,
+      default: "pending",
+      enum: ["pending", "accepted", "rejected"],
+    },
+
     rcNumber: {
       type: String,
       required: true,

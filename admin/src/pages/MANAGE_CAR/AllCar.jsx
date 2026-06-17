@@ -758,7 +758,7 @@ export default function AllCars() {
                       "Seller",
                       "Crane Man",
                       "Location",
-                      "Price",
+                      "User Price (₹)",
                       "KM / Fuel",
                       "Status",
                       "Actions",
@@ -945,7 +945,7 @@ export default function AllCars() {
                         </div>
                       </td>
 
-                      {/* Price */}
+                      {/* User Price */}
                       <td
                         style={{ padding: "13px 16px", whiteSpace: "nowrap" }}
                       >
@@ -960,11 +960,11 @@ export default function AllCars() {
                           }}
                         >
                           <IndianRupee size={13} color="#6b7280" />
-                          {car.price
-                            ? Number(car.price).toLocaleString("en-IN")
+                          {car.priceUserWant
+                            ? Number(car.priceUserWant).toLocaleString("en-IN")
                             : "—"}
                         </div>
-                        <p
+                        {/* <p
                           style={{
                             margin: "2px 0 0",
                             fontSize: 11,
@@ -974,7 +974,7 @@ export default function AllCars() {
                         >
                           {car.isPaid ? "✓ Paid" : "Unpaid"} ·{" "}
                           {car.paymentMethod?.toUpperCase() || "—"}
-                        </p>
+                        </p> */}
                       </td>
 
                       {/* KM / Fuel */}
