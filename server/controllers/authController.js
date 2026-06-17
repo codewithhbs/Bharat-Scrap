@@ -107,12 +107,14 @@ async function register(req, res) {
 async function verifyUser(req, res) {
     try {
         const { phone, otp } = req.body;
+        
         if (!phone || !otp) {
             return res.status(400).json({
                 success: false,
                 message: "Phone and OTP are required",
             });
         }
+        
         const user = await User.findOne({ phone });
         if (!user) {
             return res.status(404).json({
@@ -121,74 +123,46 @@ async function verifyUser(req, res) {
             });
         }
 
+        // ✅ Type-safe test user check (both are strings from req.body)
+        const isTestUser = phone === "9079036042" && otp === "123456";
+
+        if (!isTestUser) {
+            // ✅ Real OTP validation only for non-test users
+            if (user.otp !== Number(otp) || user.otpExpiry < new Date()) {
+                console.log("Invalid OTP attempt for phone:", phone);
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid OTP",
+                });
+            }
+        } else {
+            console.log("Test user logged in");
+        }
+
+        // ✅ Tokens generate karo sirf after successful validation
         const accessToken = signAccessToken(user);
         const { token: refreshToken, jti } = await signRefreshToken(user._id);
-        if (phone === 9079036042 && otp === 123456) {
-            console.log("Test user logged in");
-            user.otp = null;
-            user.otpExpiry = null;
-            user.isPhoneVerified = true;
-            await user.save();
-            return res.status(201).json({
-                success: true,
-                message: "User verified successfully",
-                user: user,
-                sessionId: jti,
-                accessToken,
-                refreshToken
-            });
-        }
-        console.log("out")
-        if (user.otp !== Number(otp) || user.otpExpiry < new Date()) {
-            console.log("Invalid OTP attempt for phone:", phone);
-            return res.status(400).json({
-                success: false,
-                message: "Invalid OTP",
-            });
-        }
 
         user.otp = null;
         user.otpExpiry = null;
         user.isPhoneVerified = true;
         await user.save();
-        // if (where === 'web') {
-        //     if (user.role === 'craneMan') {
-        //         return res.status(403).json({
-        //             success: false,
-        //             message: "Crane operators cannot access the web dashboard",
-        //         });
-        //     }
-        //     res.status(201).json({
-        //         success: true,
-        //         message: "User verified successfully",
-        //         user: user,
-        //         sessionId: jti,
-        //         accessToken,
-        //         refreshToken
-        //     });
-        // }
 
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
             message: "User verified successfully",
-            user: user,
+            user,
             sessionId: jti,
             accessToken,
-            refreshToken
+            refreshToken,
         });
 
-        // user.isPhoneVerified = true;
-        // await user.save();
-        // return res.status(200).json({
-        //     success: true,
-        //     message: "User verified successfully",
-        // });
     } catch (error) {
-        console.log("Internal server error", error)
+        console.log("Internal server error", error);
         return res.status(500).json({
             success: false,
-            message: "Internal server error"
-        })
+            message: "Internal server error",
+        });
     }
 }
 
