@@ -136,7 +136,7 @@ const styles = `
   }
 
   .sidebar {
-    position: sticky; top: 88px;
+    position: sticky; top: 120px;
   }
   .sidebar-label {
     font-size: 0.72rem; font-weight: 700;
@@ -277,22 +277,6 @@ const styles = `
     color: #1b5e20;
     line-height: 1.65;
   }
-
-  .footer {
-    background: #1a1a1a;
-    color: #aaa;
-    padding: 2rem 5vw;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 1rem; flex-wrap: wrap;
-    font-size: 0.82rem;
-  }
-  .footer-logo {
-    font-size: 1rem; font-weight: 800;
-    color: var(--green-mid);
-  }
-  .footer a { color: #aaa; text-decoration: none; }
-  .footer a:hover { color: #fff; }
-  .footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
 
   @media (max-width: 860px) {
     .layout { grid-template-columns: 1fr; }

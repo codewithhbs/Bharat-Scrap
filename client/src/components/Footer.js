@@ -44,6 +44,7 @@ export default function Footer() {
                         <li><a href="/about-us">About Us</a></li>
                         <li><a href="/faqs">FAQ`s</a></li>
                         <li><a href="/contact-us">Contact Us</a></li>
+                        <li><a href="/privacy-policy">Privacy Policy</a></li>
                     </ul>
                 </div>
                 <div className="col-md-3 col-xs-6 ">
