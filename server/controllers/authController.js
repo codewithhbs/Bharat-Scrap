@@ -107,14 +107,14 @@ async function register(req, res) {
 async function verifyUser(req, res) {
     try {
         const { phone, otp } = req.body;
-        
+
         if (!phone || !otp) {
             return res.status(400).json({
                 success: false,
                 message: "Phone and OTP are required",
             });
         }
-        
+
         const user = await User.findOne({ phone });
         if (!user) {
             return res.status(404).json({
@@ -123,8 +123,10 @@ async function verifyUser(req, res) {
             });
         }
 
-        // ✅ Type-safe test user check (both are strings from req.body)
-        const isTestUser = phone === "9079036042" && otp === "123456";
+        const testNumbers = ["9079036042", "6200027897"];
+
+        const isTestUser =
+            testNumbers.includes(phone) && otp === "123456";
 
         if (!isTestUser) {
             // ✅ Real OTP validation only for non-test users

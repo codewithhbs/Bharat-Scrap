@@ -193,7 +193,7 @@ export default function HomeScreen() {
       </SafeAreaView>
     );
   }
-
+  
   const role = user?.role || 'user';
 
   return (

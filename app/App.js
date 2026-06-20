@@ -22,10 +22,13 @@ import SoldCarDetailScreen from './screens/SoldCarDetailScreen.js';
 import * as Notifications from 'expo-notifications';
 
 import { Colors } from './constants/colors';
-import { isLoggedIn } from './lib/api.js';
+import api, { isLoggedIn } from './lib/api.js';
 
 // ✅ Alag file se import — circular dependency khatam
 import { navigationRef } from './lib/navigationRef';
+import LocationDisclosureScreen from './components/LocationDisclosureScreen.js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+const DISCLOSURE_KEY = '@bg_location_disclosure_shown_v1';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -106,22 +109,70 @@ function AuthLoadingScreen({ navigation }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        console.log('=== Auth Check Started ===');
+
         const loggedIn = await isLoggedIn();
-        if (loggedIn) {
-          navigation.replace('MainTabs');
+        console.log('loggedIn:', loggedIn);
+
+        if (!loggedIn) {
+          console.log('User not logged in -> Login');
+          navigation.replace('Login');
+          return;
+        }
+
+        console.log('Fetching user details...');
+        const res = await api.get('/api/auth/me');
+
+        // console.log('API Response:', JSON.stringify(res.data, null, 2));
+
+        if (res.data?.success) {
+          const user = res.data.user;
+          console.log('User:', user);
+          console.log('Role:', user.role);
+
+          if (user.role === 'craneMan' || user.role === 'crane_man') {
+            console.log('CraneMan user detected');
+
+            const shown = await AsyncStorage.getItem(DISCLOSURE_KEY);
+            console.log('DISCLOSURE_KEY value:', shown);
+
+            if (shown === 'true') {
+              console.log('Disclosure already shown -> MainTabs');
+              navigation.replace('MainTabs');
+            } else {
+              console.log('Disclosure not shown -> LocationDisclosure');
+              navigation.replace('LocationDisclosure');
+            }
+          } else {
+            console.log('Normal user -> MainTabs');
+            navigation.replace('MainTabs');
+          }
         } else {
+          console.log('API success false -> Login');
           navigation.replace('Login');
         }
       } catch (error) {
-        console.log('Auth check error:', error);
+        console.log('=== Auth check error ===');
+        console.log(error);
+        console.log('Response:', error?.response?.data);
+        console.log('Status:', error?.response?.status);
+
         navigation.replace('Login');
       }
     };
+
     checkAuth();
   }, [navigation]);
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.white }}>
+    <View
+      style={{
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: Colors.white,
+      }}
+    >
       <ActivityIndicator size="large" color={Colors.blue500} />
     </View>
   );
@@ -148,6 +199,8 @@ export default function App() {
           <Stack.Screen name="Success" component={SuccessScreen} />
           <Stack.Screen name="ProfileUpdate" component={ProfileUpdateScreen} />
           <Stack.Screen name="SoldCarDetails" component={SoldCarDetailScreen} />
+          <Stack.Screen name="LocationDisclosure" component={LocationDisclosureScreen}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>
