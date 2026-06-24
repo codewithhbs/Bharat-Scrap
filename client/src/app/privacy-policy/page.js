@@ -313,12 +313,49 @@ const sections = [
           <li>Pages visited and time spent on the website</li>
           <li>Device information (mobile or desktop)</li>
           <li>Anonymized usage data via Google Analytics</li>
+          <li>Precise location of crane operators during active vehicle pickups (see Section 02)</li>
         </ul>
       </>
     )
   },
   {
-    id: 's2', num: '02', icon: '🎯', title: 'How We Use Your Information',
+    id: 's-location', num: '02', icon: '📍', title: 'Location Data & Background Tracking',
+    content: (
+      <>
+        <p>Our mobile app collects location data to support live pickup tracking. This is the only feature that requires location access, and it applies <strong style={{color:'#1a1a1a'}}>only to crane operators</strong> assigned to vehicle pickups — not to sellers or general users.</p>
+
+        <p><strong style={{color:'#1a1a1a'}}>What we collect:</strong></p>
+        <ul>
+          <li>Precise location (GPS latitude, longitude, accuracy, speed) of the assigned crane operator's device</li>
+        </ul>
+
+        <p><strong style={{color:'#1a1a1a'}}>When we collect it:</strong></p>
+        <ul>
+          <li>Only after a crane operator accepts a pickup job and starts travelling to the seller's location</li>
+          <li>Location is collected <strong style={{color:'#1a1a1a'}}>in the background — even when the app is minimized, not in use, or the screen is off</strong> — because the operator keeps the app in the background while driving to the pickup point</li>
+          <li>Tracking automatically stops once the operator reaches the pickup or completes the job, and the operator can stop it manually at any time</li>
+        </ul>
+
+        <p><strong style={{color:'#1a1a1a'}}>Why we need it:</strong></p>
+        <ul>
+          <li>To display the crane operator's real-time position on a live map so the seller and our team can see their location and estimated arrival time</li>
+          <li>This continuous tracking cannot be done reliably without background location access</li>
+        </ul>
+
+        <p><strong style={{color:'#1a1a1a'}}>How it is shared:</strong></p>
+        <ul>
+          <li>The operator's live location is sent to our secure servers and shown to the relevant seller and our operations team for the duration of the active pickup only</li>
+          <li>Location data is <strong style={{color:'#1a1a1a'}}>never sold, rented, or shared with advertisers or any third-party marketers</strong></li>
+        </ul>
+
+        <div className="highlight-box">
+          🔔 While background location tracking is active, a persistent notification is shown on the operator's device so they are always aware that tracking is running, and they can stop it at any time.
+        </div>
+      </>
+    )
+  },
+  {
+    id: 's2', num: '03', icon: '🎯', title: 'How We Use Your Information',
     content: (
       <>
         <p>Your information is used solely for service delivery and business operations. It is never sold or rented to any third party.</p>
@@ -338,7 +375,7 @@ const sections = [
     )
   },
   {
-    id: 's3', num: '03', icon: '🤝', title: 'Information Sharing',
+    id: 's3', num: '04', icon: '🤝', title: 'Information Sharing',
     content: (
       <>
         <p>Bharat Scrap Facilities shares your data only in limited and clearly defined circumstances:</p>
@@ -353,7 +390,7 @@ const sections = [
     )
   },
   {
-    id: 's4', num: '04', icon: '🛡️', title: 'Data Security',
+    id: 's4', num: '05', icon: '🛡️', title: 'Data Security',
     content: (
       <>
         <p>The security of your information is a top priority for us. We follow industry-standard practices to keep your data protected:</p>
@@ -369,7 +406,7 @@ const sections = [
     )
   },
   {
-    id: 's5', num: '05', icon: '🍪', title: 'Cookies & Tracking',
+    id: 's5', num: '06', icon: '🍪', title: 'Cookies & Tracking',
     content: (
       <>
         <p>Our website uses cookies to enhance your browsing experience and improve our services:</p>
@@ -383,7 +420,7 @@ const sections = [
     )
   },
   {
-    id: 's6', num: '06', icon: '⏳', title: 'Data Retention',
+    id: 's6', num: '07', icon: '⏳', title: 'Data Retention',
     content: (
       <>
         <p>We retain your data only for as long as necessary based on the purpose for which it was collected:</p>
@@ -391,6 +428,7 @@ const sections = [
           <li>Vehicle scrapping records — 7 years (as required by government regulations)</li>
           <li>Payment and banking records — 5 years (Income Tax Act compliance)</li>
           <li>Customer service and communication records — 2 years</li>
+          <li>Crane operator location data — retained only for the duration of an active pickup and a short operational log period, then deleted</li>
           <li>Website analytics data — 26 months (Google Analytics default retention)</li>
           <li>Marketing preferences — until you choose to unsubscribe</li>
         </ul>
@@ -401,7 +439,7 @@ const sections = [
     )
   },
   {
-    id: 's7', num: '07', icon: '⚖️', title: 'Your Rights',
+    id: 's7', num: '08', icon: '⚖️', title: 'Your Rights',
     content: (
       <>
         <p>Under the Information Technology Act, 2000 and the Digital Personal Data Protection (DPDP) Act, 2023, you have the following rights regarding your personal data:</p>
@@ -417,7 +455,7 @@ const sections = [
     )
   },
   {
-    id: 's8', num: '08', icon: '🔗', title: 'Third-Party Links',
+    id: 's8', num: '09', icon: '🔗', title: 'Third-Party Links',
     content: (
       <>
         <p>Our website may contain links to external platforms and services — such as Google Maps, social media pages (Facebook, Instagram, Twitter), or payment gateways.</p>
@@ -426,7 +464,7 @@ const sections = [
     )
   },
   {
-    id: 's9', num: '09', icon: '📞', title: 'Contact & Grievance',
+    id: 's9', num: '10', icon: '📞', title: 'Contact & Grievance',
     content: (
       <>
         <p>For any questions, concerns, or requests related to this Privacy Policy or your personal data, please reach out to our Grievance Officer:</p>
