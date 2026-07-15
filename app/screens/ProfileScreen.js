@@ -263,7 +263,7 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleWhatsApp = () => {
-    Linking.openURL('https://wa.me/919079036042?text=Hi%2C%20I%20need%20help%20with%20BharatScrap');
+    Linking.openURL('https://wa.me/919355222165?text=Hi%2C%20I%20need%20help%20with%20BharatScrap');
   };
 
   // ── User display info ──────────────────────────────────────────────────────
