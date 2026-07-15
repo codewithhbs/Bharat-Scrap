@@ -195,7 +195,7 @@ export default function Page() {
   };
 
   const handleWhatsApp = () => {
-    window.open('https://wa.me/919079036042?text=Hi%2C%20I%20need%20help%20with%20BharatScrap', '_blank');
+    window.open('https://wa.me/919355222165?text=Hi%2C%20I%20need%20help%20with%20BharatScrap', '_blank');
   };
 
   const displayName = user?.name || 'User';
