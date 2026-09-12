@@ -104,7 +104,8 @@ export default function Contact() {
                                 <div className="contact-card" id="contact-card-phone">
                                     <div className="contact-icon"><i className="fas fa-phone"></i></div>
                                     <h4 className="contact-title">Call Us</h4>
-                                    <a className="contact-text" href="tel:+9355222165">+91 9355222165</a>
+                                    <a className="contact-text" href="tel:+9355222165">+91 9355222165</a> ,
+                                    <a className="contact-text" href="tel:+9999866678">+91 9999866678</a>
                                 </div>
                                 <div className="contact-card" id="contact-card-email">
                                     <div className="contact-icon"><i className="fas fa-envelope"></i></div>

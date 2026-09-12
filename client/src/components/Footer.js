@@ -70,7 +70,7 @@ export default function Footer() {
                         <div className="box-info-contact mt-0 contact-no">
                             <a href="tel:+9355222165">
                                 <p className="text-md neutral-400">
-                                    <i className="fas fa-phone-alt"></i>+91 9355222165
+                                    <i className="fas fa-phone-alt"></i>+91 9355222165 , +91 9999866678
                                 </p>
                             </a>
                             <a href="mailto:bharatscarpfacility@gmail.com" target="_blank" rel="noopener noreferrer">
