@@ -18,7 +18,6 @@ import { Svg, Path, Circle } from 'react-native-svg';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Colors } from '../constants/colors';
 import api from '../lib/api';
-import polyline from '@mapbox/polyline';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const POLL_INTERVAL = 10000;
@@ -201,28 +200,20 @@ function ThumbImage({ label, uri }) {
 
 async function fetchRouteCoordinates(origin, destination) {
     try {
-        const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&mode=driving&key=${GOOGLE_MAPS_API_KEY}`;
-
-        const res = await fetch(url);
-        const data = await res.json();
-
-        if (data.status !== 'OK' || !data.routes?.length) {
-            console.log('Directions API error:', data.status);
-            return null;
-        }
-
-        // Encoded polyline ko decode karo
-        const points = polyline.decode(data.routes[0].overview_polyline.points);
-        const coords = points.map(([latitude, longitude]) => ({ latitude, longitude }));
-
-        const leg = data.routes[0].legs[0];
+        const res = await api.get('/api/map/route', {
+            params: {
+                origin: `${origin.latitude},${origin.longitude}`,
+                destination: `${destination.latitude},${destination.longitude}`,
+            },
+        });
+        if (!res.data?.success || !(res.data.coordinates?.length > 1)) return null;
         return {
-            coords,
-            distanceMeters: leg.distance.value,
-            durationSeconds: leg.duration.value,
+            coords: res.data.coordinates,
+            distanceMeters: res.data.distanceMeters,
+            durationSeconds: res.data.durationSeconds,
         };
     } catch (err) {
-        console.log('Route fetch error:', err.message);
+        console.log('Route fetch error:', err?.response?.data || err.message);
         return null;
     }
 }

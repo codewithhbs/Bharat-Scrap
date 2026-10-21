@@ -868,41 +868,30 @@ function WebLiveTrackingMap({ carId, initialCraneLocation, pickupLocation }) {
       if (movedM < 100) return;
     }
 
-    const svc = new window.google.maps.DirectionsService();
-    svc.route(
-      {
-        origin: { lat: craneLat, lng: craneLng },
-        destination: pickup,
-        travelMode: window.google.maps.TravelMode.DRIVING,
-      },
-      (result, status) => {
-        if (status !== "OK") {
-          console.warn("Directions status:", status);
-          // Fallback: seedhi line
-          if (polylineRef.current) polylineRef.current.setMap(null);
-          polylineRef.current = new window.google.maps.Polyline({
-            path: [{ lat: craneLat, lng: craneLng }, pickup],
-            strokeColor: "#2563EB",
-            strokeWeight: 4,
-            strokeOpacity: 0.7,
-            map: mapRef.current,
-            geodesic: true,
-          });
+    // Backend proxy: Google Routes API -> Directions -> OSRM (road-following route)
+    api
+      .get("/map/route", {
+        params: {
+          origin: `${craneLat},${craneLng}`,
+          destination: `${pickup.lat},${pickup.lng}`,
+        },
+      })
+      .then((res) => {
+        const data = res.data;
+        if (!data?.success || !(data.coordinates?.length > 1) || !mapRef.current) {
+          console.warn("Route not available", data);
           return;
         }
 
-        const leg = result.routes[0].legs[0];
         setRouteInfo({
-          distance: leg.distance.text,
-          duration: leg.duration.text,
+          distance: data.distanceText,
+          duration: data.durationText,
         });
+
+        const path = data.coordinates.map((c) => ({ lat: c.latitude, lng: c.longitude }));
 
         // Purani polyline hatao
         if (polylineRef.current) polylineRef.current.setMap(null);
-
-        // Geometry library se decode
-        const encoded = result.routes[0].overview_polyline;
-        const path = window.google.maps.geometry.encoding.decodePath(encoded);
 
         polylineRef.current = new window.google.maps.Polyline({
           path,
@@ -925,20 +914,19 @@ function WebLiveTrackingMap({ carId, initialCraneLocation, pickupLocation }) {
           ],
         });
 
-        // Map fit karo
-        const bounds = new window.google.maps.LatLngBounds();
-        path.forEach((p) => bounds.extend(p));
-        if (pickup) bounds.extend(pickup);
-        mapRef.current.fitBounds(bounds, {
-          top: 60,
-          right: 60,
-          bottom: 60,
-          left: 60,
-        });
+        // Sirf pehli baar map fit karo (har poll pe zoom reset na ho)
+        if (!lastCraneRef.current) {
+          const bounds = new window.google.maps.LatLngBounds();
+          path.forEach((p) => bounds.extend(p));
+          bounds.extend(pickup);
+          mapRef.current.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
+        }
 
         lastCraneRef.current = { lat: craneLat, lng: craneLng };
-      },
-    );
+      })
+      .catch((err) => {
+        console.warn("Route fetch failed:", err?.response?.data || err.message);
+      });
   };
 
   // ── Poll CraneMan location every 10s ──

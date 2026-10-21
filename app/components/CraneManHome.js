@@ -182,15 +182,17 @@ const handleCall = async (phone) => {
     }
 };
 function openGoogleMaps(lat, lng) {
-    const url =
+    // Turn-by-turn navigation (route ke saath), sirf pin nahi
+    const web = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
+    const native =
         Platform.OS === 'ios'
-            ? `maps:0,0?q=${lat},${lng}`
-            : `geo:0,0?q=${lat},${lng}`;
-    Linking.canOpenURL(url).then((ok) => {
+            ? `comgooglemaps://?daddr=${lat},${lng}&directionsmode=driving`
+            : `google.navigation:q=${lat},${lng}&mode=d`;
+    Linking.openURL(native).catch(() =>
         Linking.openURL(
-            ok ? url : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`
-        );
-    });
+            Platform.OS === 'ios' ? `maps://?daddr=${lat},${lng}&dirflg=d` : web
+        ).catch(() => Linking.openURL(web))
+    );
 }
 
 // ─── Pulse Ring for Map Marker ────────────────────────────────────────────────
@@ -223,6 +225,7 @@ function NavigationMapModal({ visible, job, onClose }) {
     const watchId = useRef(null);
     const hasInitialFit = useRef(false);
     const prevCraneRef = useRef(null);
+    const hasRouteFit = useRef(false);
 
     const [craneLocation, setCraneLocation] = useState(null);
     const [distance, setDistance] = useState(null);
@@ -321,21 +324,35 @@ function NavigationMapModal({ visible, job, onClose }) {
 
     const fetchRoute = async (origin, destination) => {
         try {
-            const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&mode=driving&key=${GOOGLE_MAPS_API_KEY}`;
-            const res = await fetch(url);
-            const data = await res.json();
-            if (data.routes?.length > 0) {
-                const points = decodePolyline(data.routes[0].overview_polyline.points);
-                setRouteCoords(points);
+            const res = await api.get('/api/map/route', {
+                params: {
+                    origin: `${origin.latitude},${origin.longitude}`,
+                    destination: `${destination.latitude},${destination.longitude}`,
+                },
+            });
+            const coords = res.data?.coordinates;
+            if (res.data?.success && coords?.length > 1) {
+                setRouteCoords(coords);
+                if (res.data.distanceMeters) setDistance(res.data.distanceMeters / 1000);
+                if (mapRef.current && !hasRouteFit.current) {
+                    hasRouteFit.current = true;
+                    mapRef.current.fitToCoordinates(coords, {
+                        edgePadding: { top: 120, right: 60, bottom: 300, left: 60 },
+                        animated: true,
+                    });
+                }
             }
         } catch (e) {
-            console.warn('Route fetch failed:', e);
+            console.warn('Route fetch failed:', e?.response?.data || e.message);
         }
     };
 
     useEffect(() => {
         if (visible) {
             hasInitialFit.current = false;
+            hasRouteFit.current = false;
+            prevCraneRef.current = null;
+            setRouteCoords([]);
             setLocationError(null);
             setCraneLocation(null);
             setDistance(null);

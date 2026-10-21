@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: notar-backend
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=mera_very_strong_password_2025_7fpVegEb8KyMTGdTmjem4zqPAwHl9LGlS6i
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: notar-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass mera_very_strong_password_2025_7fpVegEb8KyMTGdTmjem4zqPAwHl9LGlS6i   # ← YE LINE DAAL DO

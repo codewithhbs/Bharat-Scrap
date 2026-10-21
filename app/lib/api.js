@@ -1,6 +1,7 @@
 // App api helper file for React Native app, using axios for API calls and expo-secure-store for token management. It includes request and response interceptors to handle authentication tokens and automatic token refreshing on 401 errors.
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { NativeModules } from 'react-native';
 
 const API_BASE =
     "https://www.api.bharatscrapfacilities.com";
@@ -23,6 +24,8 @@ export const saveTokens = async (accessToken, refreshToken) => {
     // console.log("saveTokens", accessToken, refreshToken);
     await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
     await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+    // Native background location service ko fresh token
+    try { NativeModules.LocationService?.updateToken(accessToken || ''); } catch { }
 };
 
 export const getAccessToken = async () => {

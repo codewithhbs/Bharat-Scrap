@@ -53,6 +53,7 @@ app.use("/api/craneman", require("./routes/cranemanRoutes"));
 app.use("/api/admin", require("./routes/adminRoutes"));
 app.use("/api/contact", require("./routes/contactRoutes"));
 app.use("/api/notification", require("./routes/notificationRoutes"));
+app.use("/api/map", require("./routes/mapRoutes"));
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
