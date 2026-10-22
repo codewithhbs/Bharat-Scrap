@@ -470,7 +470,7 @@ const sections = [
         <p>For any questions, concerns, or requests related to this Privacy Policy or your personal data, please reach out to our Grievance Officer:</p>
         <ul>
           <li><strong>Email:</strong> bharatscrapfacilities@gmail.com</li>
-          <li><strong>Phone:</strong> +91 9355222165</li>
+          <li><strong>Phone:</strong> +91 9999866678</li>
           <li><strong>Address:</strong> Gata No. 142, Near Testify Rice Mill, Rajarampur, Sikandarabad Industrial Area, Bulandshahr – 203205</li>
           <li><strong>Response Time:</strong> Within 30 working days of receiving your request</li>
         </ul>

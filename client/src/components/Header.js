@@ -292,7 +292,7 @@ export default function Header() {
         <div className="top-bar top-bar-2 top-bar-3 bg-transparent">
           <div className="container-fluid">
             <div className="d-flex align-item-start justify-content-start gap-3">
-              <a href="tel:+919355222165" className="text-white">📞 Call: +91 9355222165</a>
+              <a href="tel:+919999866678" className="text-white">📞 Call: +91 9999866678</a>
               <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" className="text-white">
                 📍 Gata No. 142, Rajarampur, Sikandrabad Industrial Area, Bulandshahr – 203205
               </a>
@@ -554,7 +554,7 @@ export default function Header() {
                 </p>
                 <p className="text-md-medium neutral-1000">
                   <i className="fas fa-phone me-2"></i>
-                  <a href="tel:+919355222165">+91 9355222165</a>
+                  <a href="tel:+919999866678">+91 9999866678</a>
                 </p>
                 <p className="text-md-medium neutral-1000">
                   <i className="fas fa-envelope me-2"></i>

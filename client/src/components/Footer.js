@@ -68,9 +68,9 @@ export default function Footer() {
                     <h6 className="text-linear-3">Contact Us</h6>
                     <div className="mt-20 mb-20">
                         <div className="box-info-contact mt-0 contact-no">
-                            <a href="tel:+9355222165">
+                            <a href="tel:+9999866678">
                                 <p className="text-md neutral-400">
-                                    <i className="fas fa-phone-alt"></i>+91 9355222165 , +91 9999866678
+                                    <i className="fas fa-phone-alt"></i>+91 9999866678
                                 </p>
                             </a>
                             <a href="mailto:bharatscarpfacility@gmail.com" target="_blank" rel="noopener noreferrer">
@@ -114,12 +114,12 @@ export default function Footer() {
     </footer>
 
     {/* <!-- floating button start --> */}
-    <a href="tel:+9355222165" className="floating-call contact-no">
+    <a href="tel:+9999866678" className="floating-call contact-no">
        <i className="fas fa-phone-alt" ></i>
     </a>
 
     {/* <!-- WhatsApp Button --> */}
-    <a href="https://wa.me/9355222165" className="floating-whatsapp" target="_blank">
+    <a href="https://wa.me/9999866678" className="floating-whatsapp" target="_blank">
         <i className="fab fa-whatsapp"></i>
     </a>
     {/* <!-- floating button end --> */}
