@@ -19,6 +19,7 @@ import PriceResultScreen from './screens/PriceResultScreen';
 import SuccessScreen from './screens/SuccessScreen.js';
 import ProfileUpdateScreen from './screens/ProfileUpdateScreen.js';
 import SoldCarDetailScreen from './screens/SoldCarDetailScreen.js';
+import LegalScreen from './screens/LegalScreen.js';
 import * as Notifications from 'expo-notifications';
 
 import { Colors } from './constants/colors';
@@ -38,6 +39,8 @@ Notifications.setNotificationHandler({
     console.log('🚨 handleNotification called:', notification); // pehle confirm karo yeh hit ho raha hai
     return {
       shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
       shouldPlaySound: true,
       shouldSetBadge: true,
     };
@@ -199,6 +202,7 @@ export default function App() {
           <Stack.Screen name="Success" component={SuccessScreen} />
           <Stack.Screen name="ProfileUpdate" component={ProfileUpdateScreen} />
           <Stack.Screen name="SoldCarDetails" component={SoldCarDetailScreen} />
+          <Stack.Screen name="Legal" component={LegalScreen} />
           <Stack.Screen name="LocationDisclosure" component={LocationDisclosureScreen}
           />
         </Stack.Navigator>

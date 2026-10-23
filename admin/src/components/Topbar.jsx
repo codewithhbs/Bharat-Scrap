@@ -53,7 +53,7 @@ const Topbar = ({ onMenuClick }) => {
             {pageTitle}
           </h1>
           <p style={{ fontSize: "0.72rem", color: "var(--muted)", margin: 0, marginTop: 2 }}>
-            Bharat Scrap — Admin Portal
+            ABH Vehicle Scrap — Admin Portal
           </p>
         </div>
       </div>

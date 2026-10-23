@@ -104,7 +104,7 @@ export default function AddCraneMan() {
     },
     {
       name: "email", label: "Email Address", type: "email",
-      placeholder: "e.g. ramesh@bharatscrap.com",
+      placeholder: "e.g. ramesh@abhvehiclescrap.com",
       icon: <Mail size={14} color="#9ca3af" />,
     },
     {
@@ -203,7 +203,7 @@ export default function AddCraneMan() {
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <Recycle size={13} color="#9ca3af" />
               <span style={{ fontSize: 12, color: "#9ca3af", letterSpacing: "0.1em", textTransform: "uppercase", fontWeight: 600 }}>
-                Bharat Scrap
+                ABH Vehicle Scrap
               </span>
             </div>
           </div>

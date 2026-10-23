@@ -133,7 +133,7 @@ export default function SuccessScreen({ route, navigation }) {
           <Text style={styles.btnSecondaryText}>View My Listings</Text>
         </TouchableOpacity>
 
-        <Text style={styles.footer}>Bharat Scrap v1.0.0 · Made with ❤️ in India</Text>
+        <Text style={styles.footer}>ABH Vehicle Scrap v1.0.0 · Made with ❤️ in India</Text>
       </ScrollView>
     </SafeAreaView>
   );

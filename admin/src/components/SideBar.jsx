@@ -243,7 +243,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 className="font-display"
                 style={{ color: "#f5f1ea", fontSize: "1.1rem", fontWeight: 600, lineHeight: 1.1 }}
               >
-                Bharat Scrap
+                ABH Vehicle Scrap
               </div>
               <div style={{ color: "#b8975a", fontSize: "0.65rem", letterSpacing: "0.12em", textTransform: "uppercase" }}>
                 Admin Panel

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 export default function usePushNotification() {
   const [expoPushToken, setExpoPushToken] = useState('');
@@ -37,6 +38,13 @@ export default function usePushNotification() {
       });
     }
 
+    // Android: FCM token (firebase-admin) | iOS: Expo push token (server Expo push API se bhejta hai)
+    if (Platform.OS === 'ios') {
+      const projectId =
+        Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+      const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+      return tokenData.data;
+    }
     const tokenData = await Notifications.getDevicePushTokenAsync();
     return tokenData.data;
   }

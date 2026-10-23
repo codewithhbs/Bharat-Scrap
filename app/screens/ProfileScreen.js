@@ -59,6 +59,23 @@ function IconHelp() {
     </Svg>
   );
 }
+function IconDoc() {
+  return (
+    <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
+      <Path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke={Colors.blue500} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" />
+      <Polyline points="14,2 14,8 20,8" stroke={Colors.blue500} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" />
+      <Line x1="8" y1="13" x2="16" y2="13" stroke={Colors.blue500} strokeWidth={1.9} strokeLinecap="round" />
+      <Line x1="8" y1="17" x2="13" y2="17" stroke={Colors.blue500} strokeWidth={1.9} strokeLinecap="round" />
+    </Svg>
+  );
+}
+function IconShield() {
+  return (
+    <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
+      <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#7C3AED" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 function IconLogout() {
   return (
     <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
@@ -263,7 +280,7 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleWhatsApp = () => {
-    Linking.openURL('https://wa.me/919999866678?text=Hi%2C%20I%20need%20help%20with%20BharatScrap');
+    Linking.openURL('https://wa.me/919355222165?text=Hi%2C%20I%20need%20help%20with%20ABH%20Vehicle%20Scrap');
   };
 
   // ── User display info ──────────────────────────────────────────────────────
@@ -411,6 +428,22 @@ export default function ProfileScreen({ navigation }) {
                 right={<IconChevron />}
               />
               <MenuRow
+                icon={<IconDoc />}
+                iconBg="#EBF3FF"
+                label="Terms of Service"
+                sub="Rules for using the app"
+                onPress={() => navigation.navigate('Legal', { type: 'terms' })}
+                right={<IconChevron />}
+              />
+              <MenuRow
+                icon={<IconShield />}
+                iconBg="#F5F3FF"
+                label="Privacy Policy"
+                sub="How we use your data"
+                onPress={() => navigation.navigate('Legal', { type: 'privacy' })}
+                right={<IconChevron />}
+              />
+              <MenuRow
                 icon={<IconLogout />}
                 iconBg="#FEF2F2"
                 label={loadingLogout ? 'Logging out…' : 'Logout'}
@@ -423,7 +456,7 @@ export default function ProfileScreen({ navigation }) {
             </SectionCard>
           </View>
 
-          <Text style={s.version}>Bharat Scrap v1.0.0 · Made with ❤️ in India</Text>
+          <Text style={s.version}>ABH Vehicle Scrap v1.0.0 · Made with ❤️ in India</Text>
         </View>
       </ScrollView>
 

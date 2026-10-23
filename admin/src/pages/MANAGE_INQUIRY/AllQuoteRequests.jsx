@@ -173,7 +173,7 @@ export default function AllQuoteRequests() {
               fontWeight: 600,
             }}
           >
-            Bharat Scrap · Admin
+            ABH Vehicle Scrap · Admin
           </span>
         </div>
         <h1

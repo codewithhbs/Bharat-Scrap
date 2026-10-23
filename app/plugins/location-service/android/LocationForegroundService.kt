@@ -175,7 +175,7 @@ class LocationForegroundService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Bharat Scrap Facilities")
+            .setContentTitle("ABH Vehicle Scrap")
             .setContentText(text)
             .setSmallIcon(smallIcon())
             .setOngoing(true)

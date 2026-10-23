@@ -1,4 +1,5 @@
 const User = require("../models/user.model");
+const { sendPush } = require("../utils/sendPush");
 const { signAccessToken, signRefreshToken } = require("../utils/jwtUtil");
 const Car = require("../models/car.model");
 const RCDetail = require("../models/rcDetail.model");
@@ -343,7 +344,11 @@ async function assignCraneMan(req, res) {
             };
 
             try {
-                await admin.messaging().send(message);
+                await sendPush(craneMan.fcmToken, {
+                    title: message.notification.title,
+                    body: message.notification.body,
+                    data: message.data,
+                });
                 console.log('✅ Notification sent to:', craneMan.name);
             } catch (notifErr) {
                 console.log('⚠️ Notification failed:', notifErr.message);

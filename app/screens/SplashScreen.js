@@ -68,7 +68,7 @@ export default function SplashScreen({ navigation }) {
 
           {/* Logo Text */}
           <View style={styles.logoRow}>
-            <Text style={styles.logoWhite}>Bharat</Text>
+            <Text style={styles.logoWhite}>ABH Vehicle </Text>
             <Text style={styles.logoGreen}>Scrap</Text>
           </View>
 
@@ -118,16 +118,19 @@ const styles = StyleSheet.create({
   },
   logoRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     marginTop: 4,
+    paddingHorizontal: 16,
   },
   logoWhite: {
-    fontSize: 36,
+    fontSize: 30,
     fontWeight: '800',
     color: Colors.white,
     letterSpacing: -0.5,
   },
   logoGreen: {
-    fontSize: 36,
+    fontSize: 30,
     fontWeight: '800',
     color: '#6FD48A',
     letterSpacing: -0.5,

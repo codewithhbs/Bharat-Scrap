@@ -83,7 +83,7 @@ const Login = () => {
 
           {/* Brand Name */}
           <h1 className="text-5xl font-semibold text-[#f0f4f0] tracking-tight mb-2">
-            Bharat Scrap
+            ABH Vehicle Scrap
           </h1>
           <div className="text-[#6aaa6e] text-sm tracking-[4px] uppercase font-medium mb-6">
             Admin Panel
@@ -129,7 +129,7 @@ const Login = () => {
               Admin Sign In
             </h2>
             <p className="text-gray-600">
-              Access the Bharat Scrap dashboard
+              Access the ABH Vehicle Scrap dashboard
             </p>
           </div>
 
@@ -145,7 +145,7 @@ const Login = () => {
                 name="email"
                 value={form.email}
                 onChange={handleChange}
-                placeholder="admin@bharatscrap.com"
+                placeholder="admin@abhvehiclescrap.com"
                 className="w-full px-4 py-3.5 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-2 focus:ring-[#2e7d32]/40 focus:border-[#2e7d32] transition-colors placeholder:text-gray-400"
                 autoComplete="email"
               />
@@ -209,7 +209,7 @@ const Login = () => {
 
           {/* Footer */}
           <p className="text-center text-gray-500 text-sm mt-10">
-            © {new Date().getFullYear()} Bharat Scrap. All rights reserved.
+            © {new Date().getFullYear()} ABH Vehicle Scrap. All rights reserved.
           </p>
         </div>
       </div>

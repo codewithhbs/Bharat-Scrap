@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Bharat Scrap Facilities",
+    "name": "ABH Vehicle Scrap",
     "slug": "bharat-scrap-facilities",
     "version": "1.0.1",
     "orientation": "portrait",
@@ -14,15 +14,33 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "This app requires access to your location while you are using the app.",
-        "NSLocationAlwaysUsageDescription": "This app requires access to your location even when running in the background.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app requires access to your location both while using the app and in the background."
-      }
+        "NSLocationWhenInUseUsageDescription": "ABH Vehicle Scrap uses your location to show pickup routes and share live location with the customer during a job.",
+        "NSLocationAlwaysUsageDescription": "ABH Vehicle Scrap shares your live location in the background while you are on the way to a pickup or garage.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "ABH Vehicle Scrap shares your live location in the background while you are on the way to a pickup or garage.",
+        "NSCameraUsageDescription": "Camera is used to take photos of the car and documents.",
+        "NSPhotoLibraryUsageDescription": "Photo library is used to upload car and profile photos.",
+        "NSPhotoLibraryAddUsageDescription": "Allow saving photos to your library.",
+        "UIBackgroundModes": [
+          "location",
+          "fetch",
+          "remote-notification"
+        ],
+        "LSApplicationQueriesSchemes": [
+          "comgooglemaps",
+          "googlechromes",
+          "tel",
+          "maps"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.hbsdevelopersteam.bharatscrapfacilities",
+      "buildNumber": "1",
+      "icon": "./assets/icon.png"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#FAFAFA"
       },
       "config": {
         "googleMaps": {
@@ -47,21 +65,37 @@
     "plugins": [
       "expo-secure-store",
       [
+        "react-native-maps",
+        {
+          "iosGoogleMapsApiKey": "AIzaSyD022IF_7EVi9DEqKBizpz6vXM_nuFeE1g",
+          "androidGoogleMapsApiKey": "AIzaSyD022IF_7EVi9DEqKBizpz6vXM_nuFeE1g"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Photo library is used to upload car and profile photos.",
+          "cameraPermission": "Camera is used to take photos of the car and documents."
+        }
+      ],
+      [
         "expo-notifications",
         {
-          "icon": "./assets/adaptive-icon.png",
+          "icon": "./assets/notification-icon.png",
           "color": "#ffffff",
-          "sounds": []
+          "sounds": [],
+          "enableBackgroundRemoteNotifications": true
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow this app to access your location even when running in the background.",
-          "locationAlwaysPermission": "Allow this app to access your location in the background.",
-          "locationWhenInUsePermission": "Allow this app to access your location while you are using the app.",
+          "locationAlwaysAndWhenInUsePermission": "ABH Vehicle Scrap shares your live location in the background while you are on the way to a pickup or garage.",
+          "locationAlwaysPermission": "ABH Vehicle Scrap shares your live location in the background while you are on the way to a pickup or garage.",
+          "locationWhenInUsePermission": "ABH Vehicle Scrap uses your location to show pickup routes and share live location with the customer during a job.",
           "isAndroidBackgroundLocationEnabled": true,
-          "isAndroidForegroundServiceEnabled": true
+          "isAndroidForegroundServiceEnabled": true,
+          "isIosBackgroundLocationEnabled": true
         }
       ],
       "./plugins/withLocationService"

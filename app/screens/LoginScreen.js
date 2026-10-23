@@ -142,7 +142,7 @@ export default function LoginScreen({ navigation }) {
           {/* Hero */}
           <LinearGradient colors={['#0D3B8C', '#1356CC']} style={styles.hero}>
             <View style={styles.logoRow}>
-              <Text style={styles.logoWhite}>Bharat</Text>
+              <Text style={styles.logoWhite}>ABH Vehicle </Text>
               <Text style={styles.logoGreen}>Scrap</Text>
             </View>
             <Text style={styles.subtitle}>Enter your number to start selling your vehicle</Text>
@@ -250,8 +250,12 @@ export default function LoginScreen({ navigation }) {
 
             <Text style={styles.terms}>
               By continuing, you agree to our{' '}
-              <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-              <Text style={styles.termsLink}>Privacy Policy</Text>
+              <Text style={styles.termsLink} onPress={() => navigation.navigate('Legal', { type: 'terms' })}>
+                Terms of Service
+              </Text>{' '}and{' '}
+              <Text style={styles.termsLink} onPress={() => navigation.navigate('Legal', { type: 'privacy' })}>
+                Privacy Policy
+              </Text>
             </Text>
           </View>
         </ScrollView>
@@ -269,7 +273,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     gap: 8,
   },
-  logoRow: { flexDirection: 'row' },
+  logoRow: { flexDirection: 'row', flexWrap: 'wrap' },
   logoWhite: { fontSize: 26, fontWeight: '800', color: Colors.white },
   logoGreen: { fontSize: 26, fontWeight: '800', color: '#6FD48A' },
   subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.65)', fontWeight: '400' },
@@ -370,5 +374,5 @@ const styles = StyleSheet.create({
   dividerLine: { flex: 1, height: 1, backgroundColor: Colors.neutral200 },
   dividerText: { fontSize: 13, color: Colors.neutral400 },
   terms: { fontSize: 13, color: Colors.neutral500, textAlign: 'center', lineHeight: 20, paddingHorizontal: 10 },
-  termsLink: { color: Colors.blue500, fontWeight: '500' },
+  termsLink: { color: Colors.blue500, fontWeight: '600', textDecorationLine: 'underline' },
 });

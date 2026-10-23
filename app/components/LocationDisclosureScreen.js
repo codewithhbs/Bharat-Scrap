@@ -33,9 +33,8 @@ export default function LocationDisclosureScreen({ navigation }) {
         return;
       }
       // 2) Phir background ("Allow all the time") — Android 11+ settings me le jayega
-      if (Platform.OS === 'android') {
-        await Location.requestBackgroundPermissionsAsync();
-      }
+      // Android: "Allow all the time" settings | iOS: "Always" prompt
+      try { await Location.requestBackgroundPermissionsAsync(); } catch {}
       await finish();
     } catch {
       await finish();
@@ -69,7 +68,7 @@ export default function LocationDisclosureScreen({ navigation }) {
         <Text style={s.title}>Location Permission</Text>
 
         <Text style={s.intro}>
-          <Text style={{ fontWeight: '800' }}>BharatScrap</Text> collects your location data to enable
+          <Text style={{ fontWeight: '800' }}>ABH Vehicle Scrap</Text> collects your location data to enable
           live pickup tracking, <Text style={{ fontWeight: '800' }}>even when the app is closed or not in use</Text>.
         </Text>
 
@@ -79,7 +78,7 @@ export default function LocationDisclosureScreen({ navigation }) {
             "Start Journey" tap karte hain.
           </Bullet>
           <Bullet>
-            Aapki live location BharatScrap team aur customer ko bheji jaati hai taaki
+            Aapki live location ABH Vehicle Scrap team aur customer ko bheji jaati hai taaki
             crane pickup ka real-time status mil sake.
           </Bullet>
           <Bullet>

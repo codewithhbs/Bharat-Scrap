@@ -152,7 +152,7 @@ export default function AllCraneMan() {
               <Recycle size={17} color="#22c55e" />
             </div>
             <span style={{ fontSize: 12, color: "#6b7280", letterSpacing: "0.12em",
-              textTransform: "uppercase", fontWeight: 600 }}>Bharat Scrap · Admin</span>
+              textTransform: "uppercase", fontWeight: 600 }}>ABH Vehicle Scrap · Admin</span>
           </div>
           <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: "#0f172a", letterSpacing: "-0.4px" }}>
             Crane Men

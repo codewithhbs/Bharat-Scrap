@@ -355,7 +355,7 @@ export default function AdminDashboard() {
                 fontWeight: 600,
               }}
             >
-              Bharat Scrap · Admin Panel
+              ABH Vehicle Scrap · Admin Panel
             </span>
           </div>
           <h1
@@ -743,7 +743,7 @@ export default function AdminDashboard() {
           marginTop: 32,
         }}
       >
-        © {new Date().getFullYear()} Bharat Scrap Admin Panel · All rights
+        © {new Date().getFullYear()} ABH Vehicle Scrap Admin Panel · All rights
         reserved
       </p>
     </div>
