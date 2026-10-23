@@ -2,7 +2,7 @@
   "expo": {
     "name": "ABH Vehicle Scrap",
     "slug": "bharat-scrap-facilities",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -34,7 +34,7 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.hbsdevelopersteam.bharatscrapfacilities",
-      "buildNumber": "1",
+      "buildNumber": "11",
       "icon": "./assets/icon.png"
     },
     "android": {
